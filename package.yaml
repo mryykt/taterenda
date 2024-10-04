@@ -33,11 +33,20 @@ ghc-options:
 - -Wpartial-fields
 - -Wredundant-constraints
 
+default-extensions:
+  - TemplateHaskell
+  - FunctionalDependencies
+
 library:
   source-dirs: src
   dependencies:
   - extra
+  - containers
+  - serialise
   - mtl
+  - microlens
+  - microlens-th
+  - microlens-mtl
   - h-raylib
 
 executables:
