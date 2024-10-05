@@ -1,4 +1,4 @@
-module Tateren(fromRawData) where
+module Tateren(fromRawData,load) where
 
 import Tateren.Types
     ( Tateren,
@@ -12,11 +12,12 @@ import Tateren.Types
       bgms,
       bpmChanges,
       notes )
-import Tateren.Decoder
-    ( RawChart(..), Command(Command), MeasureStart(MeasureStart) )
 import qualified Data.IntMap as IM
 import GHC.Float (int2Float)
 import Lens.Micro ( (&), (.~), (%~) )
+import Tateren.Decoder
+    ( RawChart(..), Command(Command), MeasureStart(MeasureStart) )
+import qualified Tateren.Decoder as D
 
 fromRawData::RawChart->Tateren
 fromRawData (RawChart cs mss _)=def&measures .~ms &flip (foldr convertCommands) cs
@@ -29,3 +30,6 @@ fromRawData (RawChart cs mss _)=def&measures .~ms &flip (foldr convertCommands) 
           0xc->notes%~(Note K1 (int2Float t) v:)
           0xd->notes%~(Note Sc (int2Float t) v:)
           _->error "ここに来たとしたら実装漏れ"
+
+load::FilePath->IO Tateren
+load =(fromRawData <$>) . D.load 
