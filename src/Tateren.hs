@@ -1,4 +1,4 @@
-module Tateren (fromRawData, load) where
+module Tateren (load) where
 
 import qualified Data.IntMap as IM
 import GHC.Float (int2Float)
