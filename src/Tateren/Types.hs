@@ -1,7 +1,8 @@
-module Tateren.Types(Tateren,notes,bgms,bpmChanges,measures,key,time,value,len,start) where
+module Tateren.Types(Tateren,Note(Note),Bgm(Bgm),BpmChange(BpmChange),Key(..),Measure(Measure),notes,bgms,bpmChanges,measures,key,time,value,len,start,def) where
 
 import Data.IntMap(IntMap)
 import Lens.Micro.TH (makeLenses, makeFields)
+import qualified Data.IntMap as IM
 
 data Tateren=Tateren{_notes::[Note],_bgms::[Bgm],_bpmChanges::[BpmChange],_measures::IntMap Measure}
 
@@ -14,6 +15,9 @@ data BpmChange=BpmChange{_bpmChangeTime::Float,_bpmChangeValue::Int}
 data Key=Sc|K1|K2
 
 data Measure=Measure{len::Float,start::Float}
+
+def::Tateren
+def=Tateren [] [] [] IM.empty 
 
 makeLenses ''Tateren
 makeFields ''Note
