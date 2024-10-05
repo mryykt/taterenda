@@ -2,26 +2,27 @@ module Game (mainLoop) where
 
 import Control.Monad.Extra (notM, whileM)
 import Control.Monad.State.Strict
+import Game.Types (Game (Game), window)
+import Lens.Micro.Mtl (use)
 import Raylib.Core (closeWindow, initWindow, windowShouldClose)
-import Raylib.Util (WindowResources)
 import Prelude hiding (init)
 
 mainLoop :: IO ()
 mainLoop = init >>= evalStateT (whileM (notM $ update >> draw >> shouldClose) >> teardown)
 
-init :: IO WindowResources
-init = initWindow 640 480 "taterenda"
+init :: IO Game
+init = Game <$> initWindow 640 480 "taterenda" <*> return undefined
 
-update :: StateT WindowResources IO ()
+update :: StateT Game IO ()
 update = return ()
 
-draw :: StateT WindowResources IO ()
+draw :: StateT Game IO ()
 draw = return ()
 
-shouldClose :: StateT WindowResources IO Bool
+shouldClose :: StateT Game IO Bool
 shouldClose = lift windowShouldClose
 
-teardown :: StateT WindowResources IO ()
+teardown :: StateT Game IO ()
 teardown = do
-  w <- get
+  w <- use window
   lift $ closeWindow $ Just w

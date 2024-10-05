@@ -26,6 +26,8 @@ source-repository head
 library
   exposed-modules:
       Game
+      Game.Resource
+      Game.Types
       Tateren
       Tateren.Decoder
       Tateren.Types
