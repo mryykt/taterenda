@@ -41,8 +41,11 @@ library:
   source-dirs: src
   dependencies:
   - extra
+  - bytestring
   - containers
   - serialise
+  - cereal
+  - async
   - mtl
   - microlens
   - microlens-th

@@ -1,8 +1,8 @@
 module Tateren.Decoder (Command (..), MeasureStart (..), Unknown (..), RawChart (..), load) where
 
-import Codec.Serialise (Serialise (..), readFileDeserialise)
-import Codec.Serialise.Decoding
 import Control.Monad (replicateM)
+import qualified Data.ByteString as BS
+import Data.Serialize.Get
 
 data Command = Command Int Int Int Int Int
 
@@ -12,19 +12,23 @@ data Unknown = Unknown Int Int Int Int Int
 
 data RawChart = RawChart [Command] [MeasureStart] [Unknown]
 
-instance Serialise RawChart where
-  encode = undefined
-  decode = do
-    let
-      decodeCommand = Command <$> decodeInt <*> decodeInt <*> decodeInt <*> decodeInt <*> decodeInt
-      decodeMeasureStart = MeasureStart <$> decodeInt <*> decodeInt
-      decodeUnknown = Unknown <$> decodeInt <*> decodeInt <*> decodeInt <*> decodeInt <*> decodeInt
-    size <- decodeInt
-    commands <- replicateM (size + 1) decodeCommand
-    size2 <- fromEnum <$> decodeInt16
-    measureStarts <- replicateM (size2 + 1) decodeMeasureStart
-    unknowns <- replicateM (size2 + 1) decodeUnknown
-    return $ RawChart commands measureStarts unknowns
+getRawChart :: Get RawChart
+getRawChart = do
+  let
+    getInt = fromEnum <$> getInt32le
+    decodeCommand = Command <$> getInt <*> getInt <*> getInt <*> getInt <*> getInt
+    decodeMeasureStart = MeasureStart <$> getInt <*> getInt
+    decodeUnknown = Unknown <$> getInt <*> getInt <*> getInt <*> getInt <*> getInt
+  size <- fromEnum <$> getInt16le
+  commands <- replicateM (size + 1) decodeCommand
+  size2 <- fromEnum <$> getInt16le
+  measureStarts <- replicateM (size2 + 1) decodeMeasureStart
+  unknowns <-
+    replicateM
+      (size2 + 1)
+      decodeUnknown
+  return $
+    RawChart commands measureStarts unknowns
 
 load :: FilePath -> IO RawChart
-load = readFileDeserialise
+load = fmap (either undefined id . runGet getRawChart) . BS.readFile
