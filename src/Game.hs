@@ -4,6 +4,7 @@ import Control.Monad.Extra (notM, whileM)
 import Control.Monad.State.Strict
 import Game.Types (Game (Game), window)
 import Lens.Micro.Mtl (use)
+import qualified Music
 import Raylib.Core (closeWindow, initWindow, windowShouldClose)
 import Prelude hiding (init)
 
@@ -11,7 +12,7 @@ mainLoop :: IO ()
 mainLoop = init >>= evalStateT (whileM (notM $ update >> draw >> shouldClose) >> teardown)
 
 init :: IO Game
-init = Game <$> initWindow 640 480 "taterenda" <*> return undefined
+init = Game <$> initWindow 640 480 "taterenda" <*> return Music.list <*> return undefined
 
 update :: StateT Game IO ()
 update = return ()

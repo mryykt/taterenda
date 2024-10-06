@@ -1,4 +1,4 @@
-module Music (Music, name, genre, artist, bpm, directory, chart, sounds, current, prev, next, selectAnother, selectNormal, list) where
+module Music (Music, MusicList, name, genre, artist, bpm, directory, chart, sounds, current, prev, next, selectAnother, selectNormal, list) where
 
 import Control.Monad.State
 import Data.IntMap (IntMap)
