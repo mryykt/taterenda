@@ -41,6 +41,7 @@ library
       src
   default-extensions:
       TemplateHaskell
+      FlexibleContexts
       FunctionalDependencies
       OverloadedRecordDot
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
@@ -69,6 +70,7 @@ executable taterenda-exe
       app
   default-extensions:
       TemplateHaskell
+      FlexibleContexts
       FunctionalDependencies
       OverloadedRecordDot
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
@@ -88,6 +90,7 @@ test-suite taterenda-test
       test
   default-extensions:
       TemplateHaskell
+      FlexibleContexts
       FunctionalDependencies
       OverloadedRecordDot
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N

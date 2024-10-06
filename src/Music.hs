@@ -1,7 +1,13 @@
-module Music (Music, name, genre, artist, bpm, directory, chart, sounds) where
+module Music (Music, name, genre, artist, bpm, directory, chart, sounds, current, prev, next, selectAnother, selectNormal, list) where
 
+import Control.Monad.State
 import Data.IntMap (IntMap)
+import Data.Tuple.Extra (second3, snd3)
 import qualified Music.Sounds as Sounds
+
+type MusicList = ([Select], (Music, Select), [Select])
+
+data Select = Select {normal :: Music, another :: Maybe Music}
 
 data Music = Music
   { name :: String
@@ -12,6 +18,59 @@ data Music = Music
   , chart :: FilePath
   , sounds :: IntMap FilePath
   }
+
+instance Eq Music where
+  m1 == m2 = m1.name == m2.name
+
+current :: StateT MusicList IO Music
+current = gets (fst . snd3)
+
+prev :: StateT MusicList IO ()
+prev = modify' f
+  where
+    f (a : b, (_, c), d) = (b, (a.normal, a), c : d)
+    f x = x
+
+next :: StateT MusicList IO ()
+next = modify' f
+  where
+    f (a, (_, b), c : d) = (b : a, (c.normal, c), d)
+    f x = x
+
+selectAnother :: StateT MusicList IO ()
+selectAnother = modify' f
+  where
+    f ml@(_, (_, m), _) = case m.another of
+      Just a -> second3 (const (a, m)) ml
+      Nothing -> ml
+
+selectNormal :: StateT MusicList IO ()
+selectNormal = modify' f
+  where
+    f ml@(_, (_, m), _) = second3 (const (m.normal, m)) ml
+
+list :: MusicList
+list =
+  ( []
+  , (frozen, Select frozen Nothing)
+  ,
+    [ Select zionia Nothing
+    , Select grave (Just graveA)
+    , Select abacyber Nothing
+    , Select platinum Nothing
+    , Select llr Nothing
+    , Select ld Nothing
+    , Select empire (Just empireA)
+    , Select a3 (Just a3A)
+    , Select a2 (Just a2A)
+    , Select ark (Just arkA)
+    , Select wanderer Nothing
+    , Select witchcraft (Just witchcraftA)
+    , Select l9 Nothing
+    , Select _2002 (Just _2002A)
+    , Select binary Nothing
+    ]
+  )
 
 frozen, zionia, grave, graveA, abacyber, platinum, llr, ld, empire, empireA, a3, a3A, a2, a2A, ark, arkA, wanderer, witchcraft, witchcraftA, l9, _2002, _2002A, binary :: Music
 frozen = Music "Frozen Bond" "ballade" "paraoka" 106 "frozen" "frozen.ttr" Sounds.frozen
