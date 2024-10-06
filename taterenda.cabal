@@ -28,6 +28,8 @@ library
       Game
       Game.Resource
       Game.Types
+      Music
+      Music.Sounds
       Tateren
       Tateren.Decoder
       Tateren.Types
