@@ -13,6 +13,7 @@ import Music (Music (directory))
 import qualified Music
 import Raylib.Core (clearBackground, closeWindow, initWindow, setTargetFPS, windowShouldClose)
 import Raylib.Core.Audio (initAudioDevice)
+import Raylib.Util (drawing)
 import Raylib.Util.Colors (white)
 import System.FilePath ((</>))
 import qualified Tateren
@@ -36,8 +37,8 @@ init = do
 
 update :: StateT Game IO ()
 update = do
-  aps <- use appState
-  case aps of
+  state <- use appState
+  case state of
     InitState -> do
       curr <- zoom musicList Music.current
       let dir = "sound" </> curr.directory
@@ -48,7 +49,7 @@ update = do
       whenJustM (lift $ Resource.get ld.sounds) (\_ -> return ())
 
 draw :: StateT Game IO ()
-draw = lift $ clearBackground white
+draw = lift $ drawing $ clearBackground white
 
 shouldClose :: StateT Game IO Bool
 shouldClose = lift windowShouldClose
