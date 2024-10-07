@@ -9,13 +9,15 @@ import Control.Monad.State.Strict
 import Data.Aeson.Micro (decodeStrict, encodeStrict)
 import qualified Data.ByteString as BS
 import Data.Maybe (fromMaybe)
-import Game.Config
+import GHC.Float (int2Float)
+import Game.Config (Config (..), defConfig)
+import qualified Game.Draw as Draw
 import qualified Game.Resource as Resource
-import Game.Types (AppState (InitState, LoadState), Game (Game), Load (Load, sounds), Textures (Textures), appState, musicList, window)
+import Game.Types (AppState (InitState, LoadState), Game (Game), Load (Load, sounds), Textures (Textures, title), appState, drawer, musicList, textures, window)
 import Lens.Micro.Mtl (use, zoom, (.=))
 import Music (Music (directory))
 import qualified Music
-import Raylib.Core (clearBackground, closeWindow, fileExists, initWindow, setTargetFPS, setTraceLogLevel, toggleBorderlessWindowed, windowShouldClose)
+import Raylib.Core (clearBackground, closeWindow, fileExists, getScreenHeight, getScreenWidth, initWindow, setTargetFPS, setTraceLogLevel, toggleBorderlessWindowed, windowShouldClose)
 import Raylib.Core.Audio (initAudioDevice)
 import Raylib.Types (TraceLogLevel (LogNone))
 import Raylib.Util (drawing)
@@ -42,10 +44,13 @@ init = do
       <*> Resource.loadTexture "select.bmp"
       <*> Resource.loadTexture "skin.bmp"
       <*> Resource.loadTexture "title.bmp"
+  aw <- getScreenWidth
+  ah <- getScreenHeight
+  let config' = config{actualWidth = int2Float aw, actualHeight = int2Float ah}
   initAudioDevice
   setTargetFPS 60
   setTraceLogLevel LogNone
-  return $ Game w config Music.list ts InitState
+  return $ Game w config' (Draw.texture config') Music.list ts InitState
 
 update :: StateT Game IO ()
 update = do

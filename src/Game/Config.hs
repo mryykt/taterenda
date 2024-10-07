@@ -8,10 +8,12 @@ data Config = Config
   { width :: Int
   , height :: Int
   , fullScreen :: Bool
+  , actualWidth :: Float
+  , actualHeight :: Float
   }
 
 instance FromJSON Config where
-  parseJSON (Object v) = Config <$> v .: "width" <*> v .: "height" <*> v .: "fullscreen"
+  parseJSON (Object v) = Config <$> v .: "width" <*> v .: "height" <*> v .: "fullscreen" <*> return 0 <*> return 0
   parseJSON _ = fail "parse Config failed"
 
 instance ToJSON Config where
@@ -23,4 +25,6 @@ defConfig =
     { width = 640
     , height = 480
     , fullScreen = False
+    , actualWidth = 0
+    , actualHeight = 0
     }

@@ -27,6 +27,7 @@ library
   exposed-modules:
       Game
       Game.Config
+      Game.Draw
       Game.Resource
       Game.Types
       Music

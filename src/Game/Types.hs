@@ -2,14 +2,15 @@ module Game.Types (module Game.Types) where
 
 import Data.IntMap (IntMap)
 import Game.Config (Config)
+import Game.Draw (Rectangle, Texture, Vector)
 import Game.Resource (Loader)
 import Lens.Micro.TH (makeLenses)
 import Music (MusicList)
-import Raylib.Types (Sound, Texture)
+import Raylib.Types (Sound)
 import Raylib.Util (WindowResources)
 import Tateren.Types (Tateren)
 
-data Game = Game {_window :: WindowResources, _confifg :: Config, _musicList :: MusicList, _textures :: Textures, _appState :: AppState}
+data Game = Game {_window :: WindowResources, _config :: Config, _drawer :: Texture -> Vector -> Rectangle -> IO (), _musicList :: MusicList, _textures :: Textures, _appState :: AppState}
 
 data Textures = Textures
   { font :: Texture
