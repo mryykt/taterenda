@@ -7,7 +7,7 @@ import Control.Monad.State.Strict
   , lift
   )
 import qualified Game.Resource as Resource
-import Game.Types (AppState (InitState, LoadState), Game (Game), Load (Load, sounds), Textures (Textures), appState, musicList, window)
+import Game.Types (AppState (InitState, LoadState), Game (Game), Load (Load, sounds), Textures (Textures), appState, defConfig, musicList, window)
 import Lens.Micro.Mtl (use, zoom, (.=))
 import Music (Music (directory))
 import qualified Music
@@ -33,7 +33,7 @@ init = do
       <*> Resource.loadTexture "title.bmp"
   initAudioDevice
   setTargetFPS 60
-  return $ Game w Music.list ts InitState
+  return $ Game w defConfig Music.list ts InitState
 
 update :: StateT Game IO ()
 update = do

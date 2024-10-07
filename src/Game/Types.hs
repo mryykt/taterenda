@@ -1,5 +1,16 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Game.Types (module Game.Types) where
 
+import Data.Aeson
+  ( FromJSON (parseJSON)
+  , KeyValue ((.=))
+  , ToJSON (toJSON)
+  , Value (Object)
+  , object
+  , (.:)
+  )
+import Data.Aeson.Types (prependFailure, typeMismatch)
 import Data.IntMap (IntMap)
 import Game.Resource (Loader)
 import Lens.Micro.TH (makeLenses)
@@ -8,7 +19,31 @@ import Raylib.Types (Sound, Texture)
 import Raylib.Util (WindowResources)
 import Tateren.Types (Tateren)
 
-data Game = Game {_window :: WindowResources, _musicList :: MusicList, _textures :: Textures, _appState :: AppState}
+data Game = Game {_window :: WindowResources, _confifg :: Config, _musicList :: MusicList, _textures :: Textures, _appState :: AppState}
+
+data Config = Config
+  { width :: Int
+  , height :: Int
+  , fullScreen :: Bool
+  }
+
+instance FromJSON Config where
+  parseJSON (Object v) = Config <$> v .: "witdh" <*> v .: "height" <*> v .: "fullscreen"
+  parseJSON invalid =
+    prependFailure
+      "parsing Config failed, "
+      (typeMismatch "Object" invalid)
+
+instance ToJSON Config where
+  toJSON config = object ["width" .= config.width, "height" .= config.height, "fullscreen" .= config.fullScreen]
+
+defConfig :: Config
+defConfig =
+  Config
+    { width = 640
+    , height = 480
+    , fullScreen = False
+    }
 
 data Textures = Textures
   { font :: Texture
