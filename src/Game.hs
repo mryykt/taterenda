@@ -9,8 +9,9 @@ import Control.Monad.State.Strict
 import Data.Aeson.Micro (decodeStrict, encodeStrict)
 import qualified Data.ByteString as BS
 import Data.Maybe (fromMaybe)
+import Game.Config
 import qualified Game.Resource as Resource
-import Game.Types (AppState (InitState, LoadState), Config (..), Game (Game), Load (Load, sounds), Textures (Textures), appState, defConfig, musicList, window)
+import Game.Types (AppState (InitState, LoadState), Game (Game), Load (Load, sounds), Textures (Textures), appState, musicList, window)
 import Lens.Micro.Mtl (use, zoom, (.=))
 import Music (Music (directory))
 import qualified Music
