@@ -28,7 +28,7 @@ data Config = Config
   }
 
 instance FromJSON Config where
-  parseJSON (Object v) = Config <$> v .: "witdh" <*> v .: "height" <*> v .: "fullscreen"
+  parseJSON (Object v) = Config <$> v .: "width" <*> v .: "height" <*> v .: "fullscreen"
   parseJSON invalid =
     prependFailure
       "parsing Config failed, "
