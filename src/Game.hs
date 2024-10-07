@@ -54,17 +54,33 @@ update :: StateT Game IO ()
 update = do
   state <- use appState
   case state of
-    InitState -> do
-      curr <- zoom musicList Music.current
-      let dir = "sound" </> curr.directory
-      tate <- lift $ Tateren.load $ dir </> curr.chart
-      loader <- lift $ Resource.soundLoader $ (dir </>) <$> curr.sounds
-      appState .= LoadState (Load tate loader)
+    InitState -> appState .= TitleState
+    TitleState -> return ()
     LoadState ld -> do
       whenJustM (lift $ Resource.get ld.sounds) (\_ -> return ())
 
+{-
+curr <- zoom musicList Music.current
+let dir = "sound" </> curr.directory
+tate <- lift $ Tateren.load $ dir </> curr.chart
+loader <- lift $ Resource.soundLoader $ (dir </>) <$> curr.sounds
+appState .= LoadState (Load tate loader)
+-}
+
 draw :: StateT Game IO ()
-draw = lift $ drawing $ clearBackground white
+draw = do
+  (dtexture, dtext) <- use drawer
+  t <- use textures
+  state <- use appState
+  lift $ drawing $ do
+    clearBackground black
+    case state of
+      TitleState -> do
+        dtexture t.title (Draw.vec (-60) (-80)) (Draw.rect 1 1 120 160)
+        dtext "START" (Draw.vec 0 40) True
+        dtext "HISCORE" (Draw.vec 0 53) True
+        dtext "QUIT" (Draw.vec 0 66) True
+      _ -> return ()
 
 shouldClose :: StateT Game IO Bool
 shouldClose = lift windowShouldClose

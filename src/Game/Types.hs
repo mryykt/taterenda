@@ -19,7 +19,7 @@ data Textures = Textures
   , title :: Texture
   }
 
-data AppState = InitState | LoadState Load
+data AppState = InitState | TitleState | LoadState Load
 
 data Load = Load {_tateren :: Tateren, sounds :: Loader IntMap Sound}
 
