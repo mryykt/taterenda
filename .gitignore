@@ -1,4 +1,5 @@
 .stack-work/
 image/
 sound/
+config.json
 *~

@@ -1,18 +1,21 @@
 module Game (mainLoop) where
 
-import Control.Monad.Extra (notM, whenJustM, whileM)
+import Control.Monad.Extra (notM, when, whenJustM, whileM)
 import Control.Monad.State.Strict
   ( StateT
   , evalStateT
   , lift
   )
+import Data.Aeson (decodeFileStrict', encodeFile)
+import Data.Maybe (fromMaybe)
 import qualified Game.Resource as Resource
-import Game.Types (AppState (InitState, LoadState), Game (Game), Load (Load, sounds), Textures (Textures), appState, defConfig, musicList, window)
+import Game.Types (AppState (InitState, LoadState), Config (..), Game (Game), Load (Load, sounds), Textures (Textures), appState, defConfig, musicList, window)
 import Lens.Micro.Mtl (use, zoom, (.=))
 import Music (Music (directory))
 import qualified Music
-import Raylib.Core (clearBackground, closeWindow, initWindow, setTargetFPS, windowShouldClose)
+import Raylib.Core (clearBackground, closeWindow, fileExists, initWindow, setTargetFPS, setTraceLogLevel, toggleBorderlessWindowed, windowShouldClose)
 import Raylib.Core.Audio (initAudioDevice)
+import Raylib.Types (TraceLogLevel (LogNone))
 import Raylib.Util (drawing)
 import Raylib.Util.Colors (white)
 import System.FilePath ((</>))
@@ -24,7 +27,13 @@ mainLoop = init >>= evalStateT (whileM (notM $ update >> draw >> shouldClose) >>
 
 init :: IO Game
 init = do
-  w <- initWindow 640 480 "taterenda"
+  isConfigExists <- fileExists "config.json"
+  config <-
+    if isConfigExists
+      then fromMaybe (error "config file is invalid") <$> decodeFileStrict' "config.json"
+      else encodeFile "config.json" defConfig >> return defConfig
+  w <- initWindow config.width config.height "taterenda"
+  when config.fullScreen toggleBorderlessWindowed
   ts <-
     Textures
       <$> Resource.loadTexture "font.bmp"
@@ -33,7 +42,8 @@ init = do
       <*> Resource.loadTexture "title.bmp"
   initAudioDevice
   setTargetFPS 60
-  return $ Game w defConfig Music.list ts InitState
+  setTraceLogLevel LogNone
+  return $ Game w config Music.list ts InitState
 
 update :: StateT Game IO ()
 update = do
