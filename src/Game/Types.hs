@@ -10,7 +10,7 @@ import Tateren.Types (Tateren)
 
 data Game = Game {_window :: WindowResources, _musicList :: MusicList, _appState :: AppState}
 
-data AppState = LoadState Load
+data AppState = InitState | LoadState Load
 
 data Load = Load {_tateren :: Tateren, sounds :: Loader IntMap Sound}
 

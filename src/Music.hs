@@ -1,6 +1,6 @@
 module Music (Music, MusicList, name, genre, artist, bpm, directory, chart, sounds, current, prev, next, selectAnother, selectNormal, list) where
 
-import Control.Monad.State
+import Control.Monad.State.Strict (StateT, gets, modify')
 import Data.IntMap (IntMap)
 import Data.Tuple.Extra (second3, snd3)
 import qualified Music.Sounds as Sounds

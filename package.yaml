@@ -45,8 +45,8 @@ library:
   - extra
   - bytestring
   - containers
-  - serialise
   - cereal
+  - filepath
   - async
   - mtl
   - microlens

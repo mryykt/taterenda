@@ -52,12 +52,12 @@ library
     , cereal
     , containers
     , extra
+    , filepath
     , h-raylib
     , microlens
     , microlens-mtl
     , microlens-th
     , mtl
-    , serialise
   default-language: Haskell2010
 
 executable taterenda-exe
