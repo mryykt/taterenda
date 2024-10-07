@@ -49,7 +49,7 @@ library:
   - filepath
   - async
   - mtl
-  - aeson
+  - microaeson
   - microlens
   - microlens-th
   - microlens-mtl

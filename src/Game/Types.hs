@@ -2,15 +2,14 @@
 
 module Game.Types (module Game.Types) where
 
-import Data.Aeson
+import Data.Aeson.Micro
   ( FromJSON (parseJSON)
-  , KeyValue ((.=))
   , ToJSON (toJSON)
   , Value (Object)
   , object
   , (.:)
+  , (.=)
   )
-import Data.Aeson.Types (prependFailure, typeMismatch)
 import Data.IntMap (IntMap)
 import Game.Resource (Loader)
 import Lens.Micro.TH (makeLenses)
@@ -29,10 +28,7 @@ data Config = Config
 
 instance FromJSON Config where
   parseJSON (Object v) = Config <$> v .: "width" <*> v .: "height" <*> v .: "fullscreen"
-  parseJSON invalid =
-    prependFailure
-      "parsing Config failed, "
-      (typeMismatch "Object" invalid)
+  parseJSON _ = fail "parse Config failed"
 
 instance ToJSON Config where
   toJSON config = object ["width" .= config.width, "height" .= config.height, "fullscreen" .= config.fullScreen]

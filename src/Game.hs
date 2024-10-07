@@ -6,7 +6,8 @@ import Control.Monad.State.Strict
   , evalStateT
   , lift
   )
-import Data.Aeson (decodeFileStrict', encodeFile)
+import Data.Aeson.Micro (decodeStrict, encodeStrict)
+import qualified Data.ByteString as BS
 import Data.Maybe (fromMaybe)
 import qualified Game.Resource as Resource
 import Game.Types (AppState (InitState, LoadState), Config (..), Game (Game), Load (Load, sounds), Textures (Textures), appState, defConfig, musicList, window)
@@ -30,8 +31,8 @@ init = do
   isConfigExists <- fileExists "config.json"
   config <-
     if isConfigExists
-      then fromMaybe (error "config file is invalid") <$> decodeFileStrict' "config.json"
-      else encodeFile "config.json" defConfig >> return defConfig
+      then fromMaybe (error "config file is invalid") . decodeStrict <$> BS.readFile "config.json"
+      else BS.writeFile "config.json" (encodeStrict defConfig) >> return defConfig
   w <- initWindow config.width config.height "taterenda"
   when config.fullScreen toggleBorderlessWindowed
   ts <-
