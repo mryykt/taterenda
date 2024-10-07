@@ -13,17 +13,14 @@ import GHC.Float (int2Float)
 import Game.Config (Config (..), defConfig)
 import qualified Game.Draw as Draw
 import qualified Game.Resource as Resource
-import Game.Types (AppState (InitState, LoadState), Game (Game), Load (Load, sounds), Textures (Textures, title), appState, drawer, musicList, textures, window)
-import Lens.Micro.Mtl (use, zoom, (.=))
-import Music (Music (directory))
+import Game.Types (AppState (..), Game (Game), Load (..), Textures (..), appState, drawer, textures, window)
+import Lens.Micro.Mtl (use, (.=))
 import qualified Music
 import Raylib.Core (clearBackground, closeWindow, fileExists, getScreenHeight, getScreenWidth, initWindow, setTargetFPS, setTraceLogLevel, toggleBorderlessWindowed, windowShouldClose)
 import Raylib.Core.Audio (initAudioDevice)
 import Raylib.Types (TraceLogLevel (LogNone))
 import Raylib.Util (drawing)
-import Raylib.Util.Colors (white)
-import System.FilePath ((</>))
-import qualified Tateren
+import Raylib.Util.Colors (black)
 import Prelude hiding (init)
 
 mainLoop :: IO ()
@@ -50,7 +47,8 @@ init = do
   initAudioDevice
   setTargetFPS 60
   setTraceLogLevel LogNone
-  return $ Game w config' (Draw.texture config') Music.list ts InitState
+  let drawTexture = Draw.texture config'
+  return $ Game w config' (drawTexture, Draw.text drawTexture ts.font) Music.list ts InitState
 
 update :: StateT Game IO ()
 update = do
