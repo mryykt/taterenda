@@ -1,12 +1,16 @@
-module Game.Resource (Loader, get, soundLoader, loadImage) where
+module Game.Resource (Loader, get, soundLoader, loadTexture) where
 
 import Codec.Picture (DynamicImage, Image (..))
 import qualified Codec.Picture as Juicy
 import Control.Concurrent.Async (Async, async, mapConcurrently, poll)
+import Control.Monad.Extra ((<=<))
 import qualified Data.Vector.Storable as Vector
 import Raylib.Core.Audio (loadSound)
-import Raylib.Types (Image (..), PixelFormat (PixelFormatUncompressedR8G8B8), Sound)
+import Raylib.Core.Textures (imageColorReplace)
+import qualified Raylib.Core.Textures as Textures
+import Raylib.Types (Color (Color), Image (..), PixelFormat (PixelFormatUncompressedR8G8B8), Sound, Texture)
 import qualified Raylib.Types as Raylib
+import qualified Raylib.Util.Colors as Colors
 import System.FilePath ((</>))
 
 newtype Loader t a = Loader (Async (t a))
@@ -40,5 +44,5 @@ convert src =
   where
     img = Juicy.convertRGB8 src
 
-loadImage :: FilePath -> IO Raylib.Image
-loadImage = (convert . either error id <$>) . Juicy.readImage . ("image" </>)
+loadTexture :: FilePath -> IO Texture
+loadTexture = Textures.loadTextureFromImage <=< (\image -> imageColorReplace image (Color 0 0xff 0 0xff) Colors.black) . convert . either error id <=< Juicy.readImage . ("image" </>)

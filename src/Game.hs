@@ -13,9 +13,7 @@ import GHC.Float (int2Float)
 import Game.Config (Config (..), defConfig)
 import qualified Game.Draw as Draw
 import qualified Game.Resource as Resource
-import Game.Textures (Textures (..))
-import qualified Game.Textures as Textures
-import Game.Types (AppState (..), Game (Game), Load (..), appState, drawer, textures, window)
+import Game.Types (AppState (..), Game (Game), Load (..), Textures (..), appState, drawer, textures, window)
 import Lens.Micro.Mtl (use, (.=))
 import qualified Music
 import Raylib.Core (clearBackground, closeWindow, fileExists, getScreenHeight, getScreenWidth, initWindow, setTargetFPS, setTraceLogLevel, toggleBorderlessWindowed, windowShouldClose)
@@ -37,7 +35,12 @@ init = do
       else BS.writeFile "config.json" (encodeStrict defConfig) >> return defConfig
   w <- initWindow config.width config.height "taterenda"
   when config.fullScreen toggleBorderlessWindowed
-  ts <- Textures.init
+  ts <-
+    Textures
+      <$> Resource.loadTexture "font.bmp"
+      <*> Resource.loadTexture "select.bmp"
+      <*> Resource.loadTexture "skin.bmp"
+      <*> Resource.loadTexture "title.bmp"
   aw <- getScreenWidth
   ah <- getScreenHeight
   let config' = config{actualWidth = int2Float aw, actualHeight = int2Float ah}

@@ -45,7 +45,6 @@ library:
   - extra
   - bytestring
   - containers
-  - vector
   - cereal
   - filepath
   - async
@@ -55,6 +54,7 @@ library:
   - microlens-th
   - microlens-mtl
   - h-raylib
+  - vector
   - JuicyPixels
 
 executables:
