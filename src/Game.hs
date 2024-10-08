@@ -13,13 +13,14 @@ import GHC.Float (int2Float)
 import Game.Config (Config (..), defConfig)
 import qualified Game.Draw as Draw
 import qualified Game.Resource as Resource
-import Game.Types (AppState (..), Game (Game), Load (..), Textures (..), appState, config, renderTexture, textures, window)
+import Game.Types (AppState (..), Game (Game), Load (..), Textures (..), appState, drawer, textures, window)
 import Lens.Micro.Mtl (use, (.=))
 import qualified Music
-import Raylib.Core (closeWindow, fileExists, getScreenHeight, getScreenWidth, initWindow, setTargetFPS, setTraceLogLevel, toggleBorderlessWindowed, windowShouldClose)
+import Raylib.Core (clearBackground, closeWindow, fileExists, getScreenHeight, getScreenWidth, initWindow, setTargetFPS, setTraceLogLevel, toggleBorderlessWindowed, windowShouldClose)
 import Raylib.Core.Audio (initAudioDevice)
-import Raylib.Core.Textures (loadRenderTexture)
 import Raylib.Types (TraceLogLevel (LogNone))
+import Raylib.Util (drawing)
+import Raylib.Util.Colors (black)
 import Prelude hiding (init)
 
 mainLoop :: IO ()
@@ -28,12 +29,12 @@ mainLoop = init >>= evalStateT (whileM (notM $ update >> draw >> shouldClose) >>
 init :: IO Game
 init = do
   isConfigExists <- fileExists "config.json"
-  cfg <-
+  config <-
     if isConfigExists
       then fromMaybe (error "config file is invalid") . decodeStrict <$> BS.readFile "config.json"
       else BS.writeFile "config.json" (encodeStrict defConfig) >> return defConfig
-  w <- initWindow cfg.width cfg.height "taterenda"
-  when cfg.fullScreen toggleBorderlessWindowed
+  w <- initWindow config.width config.height "taterenda"
+  when config.fullScreen toggleBorderlessWindowed
   ts <-
     Textures
       <$> Resource.loadTexture "font.bmp"
@@ -42,12 +43,12 @@ init = do
       <*> Resource.loadTexture "title.bmp"
   aw <- getScreenWidth
   ah <- getScreenHeight
-  let cfg' = cfg{actualWidth = int2Float aw, actualHeight = int2Float ah}
+  let config' = config{actualWidth = int2Float aw, actualHeight = int2Float ah}
   initAudioDevice
   setTargetFPS 60
   setTraceLogLevel LogNone
-  rt <- loadRenderTexture 120 160
-  return $ Game w cfg' rt Music.list ts InitState
+  let drawTexture = Draw.texture config'
+  return $ Game w config' (drawTexture, Draw.text drawTexture ts.font) Music.list ts InitState
 
 update :: StateT Game IO ()
 update = do
@@ -68,19 +69,17 @@ appState .= LoadState (Load tate loader)
 
 draw :: StateT Game IO ()
 draw = do
+  (dtexture, dtext) <- use drawer
   t <- use textures
-  rt <- use renderTexture
-  cfg <- use config
-  let dtext = Draw.text Draw.texture t.font
   state <- use appState
-  lift $ Draw.drawing cfg rt $ do
+  lift $ drawing $ do
+    clearBackground black
     case state of
       TitleState -> do
-        Draw.texture t.title (Draw.vec 0 0) (Draw.rect 1 1 120 160)
-        Draw.texture t.font (Draw.vec 20 30) (Draw.rect 199 31 80 9)
-        dtext "START" (Draw.vec 60 30) True
-        dtext "HISCORE" (Draw.vec 60 17) True
-        dtext "QUIT" (Draw.vec 60 4) True
+        dtexture t.title (Draw.vec (-60) (-80)) (Draw.rect 1 1 120 160)
+        dtext "START" (Draw.vec 0 40) True
+        dtext "HISCORE" (Draw.vec 0 53) True
+        dtext "QUIT" (Draw.vec 0 66) True
       _ -> return ()
 
 shouldClose :: StateT Game IO Bool
