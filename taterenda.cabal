@@ -30,6 +30,7 @@ library
       Game.Config
       Game.Draw
       Game.Resource
+      Game.Textures
       Game.Types
       Music
       Music.Sounds
