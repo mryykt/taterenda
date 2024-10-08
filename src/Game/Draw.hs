@@ -1,4 +1,4 @@
-module Game.Draw (Vector, Rectangle, Texture, vec, rect, texture, text, drawing) where
+module Game.Draw (Vector, Rectangle, Texture, vec, (|+|), (|-|), (|*), magnitude, rect, texture, text, drawing) where
 
 import Data.Char (ord)
 import GHC.Float (int2Float)
@@ -8,11 +8,22 @@ import qualified Raylib.Core.Textures as Raylib
 import qualified Raylib.Types as Raylib
 import qualified Raylib.Util as Raylib
 import qualified Raylib.Util.Colors as Colors
+import qualified Raylib.Util.Math as Math
 
 type Vector = Raylib.Vector2
 
 vec :: Float -> Float -> Raylib.Vector2
 vec = Raylib.Vector2
+
+(|+|), (|-|) :: Vector -> Vector -> Vector
+(|+|) = (Math.|+|)
+(|-|) = (Math.|-|)
+
+(|*) :: Vector -> Float -> Vector
+(|*) = (Math.|*)
+
+magnitude :: Vector -> Float
+magnitude = Math.magnitude
 
 type Rectangle = Raylib.Rectangle
 
