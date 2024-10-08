@@ -31,8 +31,8 @@ rect = Raylib.Rectangle
 type Texture = Raylib.Texture
 
 texture :: Config -> Texture -> Vector -> Rectangle -> IO ()
-texture config t (Raylib.Vector2 x y) src@(Raylib.Rectangle _ _ w h) =
-  Raylib.drawTexturePro t src dst (Raylib.Vector2 0 0) 0 Colors.white
+texture config t (Raylib.Vector2 x y) (Raylib.Rectangle srcx srcy w h) =
+  Raylib.drawTexturePro t (rect (srcx + 0.1) (srcy + 0.1) (w - 0.1) (h - 0.1)) dst (Raylib.Vector2 0 0) 0 Colors.white
   where
     dst = Raylib.Rectangle (config.actualWidth / 2 + scale * x) (config.actualHeight / 2 + scale * y) (scale * w) (scale * h)
     scale = if config.actualWidth / config.actualHeight < 120 / 160 then config.actualWidth / 120 else config.actualHeight / 160
