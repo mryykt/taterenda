@@ -1,6 +1,6 @@
 module Game (mainLoop) where
 
-import Control.Monad.Extra (notM, when, whenJustM, whileM)
+import Control.Monad.Extra (notM, orM, when, whenJustM, whenM, whileM)
 import Control.Monad.State.Strict
   ( StateT
   , evalStateT
@@ -10,15 +10,18 @@ import Data.Aeson.Micro (decodeStrict, encodeStrict)
 import qualified Data.ByteString as BS
 import Data.Maybe (fromMaybe)
 import GHC.Float (int2Float)
+import qualified Game.Animation as Animation
 import Game.Config (Config (..), defConfig)
+import Game.Draw ((|+|), (|-|))
 import qualified Game.Draw as Draw
 import qualified Game.Resource as Resource
-import Game.Types (AppState (..), Game (Game), Load (..), Textures (..), appState, drawer, textures, window)
-import Lens.Micro.Mtl (use, (.=))
+import Game.Types (AppState (..), Game (Game), Load (..), Textures (..), Title (Title), appState, bar, cursor, drawer, textures, titleState, window)
+import Lens.Micro (Lens', (^.))
+import Lens.Micro.Mtl (use, zoom, (%=), (+=), (-=), (.=))
 import qualified Music
-import Raylib.Core (clearBackground, closeWindow, fileExists, getScreenHeight, getScreenWidth, initWindow, setTargetFPS, setTraceLogLevel, toggleBorderlessWindowed, windowShouldClose)
+import Raylib.Core (clearBackground, closeWindow, fileExists, getFrameTime, getScreenHeight, getScreenWidth, initWindow, isKeyPressed, setTargetFPS, setTraceLogLevel, toggleBorderlessWindowed, windowShouldClose)
 import Raylib.Core.Audio (initAudioDevice)
-import Raylib.Types (TraceLogLevel (LogNone))
+import Raylib.Types (KeyboardKey (KeyDown, KeyLeft, KeyRight, KeyUp), TraceLogLevel (LogNone))
 import Raylib.Util (drawing)
 import Raylib.Util.Colors (black)
 import Prelude hiding (init)
@@ -53,11 +56,28 @@ init = do
 update :: StateT Game IO ()
 update = do
   state <- use appState
+  dt <- lift getFrameTime
   case state of
-    InitState -> appState .= TitleState
-    TitleState -> return ()
+    InitState -> appState .= TitleState (Title 0 (Animation.init (Draw.vec (-40) 40)))
+    TitleState tit ->
+      zoom (appState . titleState) $ do
+        whenM (((tit ^. cursor > 0) &&) <$> orM [lift $ isKeyPressed KeyUp, lift $ isKeyPressed KeyLeft]) $ do
+          b <- bar %?= Animation.to (Animation.get (tit ^. bar) |-| Draw.vec 0 13) (Draw.vec 0 (-50))
+          cursor -= fromEnum b
+        whenM (((tit ^. cursor < 2) &&) <$> orM [lift $ isKeyPressed KeyDown, lift $ isKeyPressed KeyRight]) $ do
+          b <- bar %?= Animation.to (Animation.get (tit ^. bar) |+| Draw.vec 0 13) (Draw.vec 0 50)
+          cursor += fromEnum b
+        bar %= Animation.update dt
     LoadState ld -> do
       whenJustM (lift $ Resource.get ld.sounds) (\_ -> return ())
+
+(%?=) :: Lens' a b -> (b -> Maybe b) -> StateT a IO Bool
+l %?= f = do
+  x <- use l
+  let y = f x
+  case y of
+    Just y' -> l .= y' >> return True
+    Nothing -> return False
 
 {-
 curr <- zoom musicList Music.current
@@ -75,8 +95,9 @@ draw = do
   lift $ drawing $ do
     clearBackground black
     case state of
-      TitleState -> do
+      TitleState tit -> do
         dtexture t.title (Draw.vec (-60) (-80)) (Draw.rect 1 1 120 160)
+        dtexture t.font (Animation.get $ tit ^. bar) (Draw.rect 199 31 80 9)
         dtext "START" (Draw.vec 0 40) True
         dtext "HISCORE" (Draw.vec 0 53) True
         dtext "QUIT" (Draw.vec 0 66) True
