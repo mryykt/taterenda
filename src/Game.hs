@@ -15,13 +15,13 @@ import Game.Config (Config (..), defConfig)
 import Game.Draw ((|+|), (|-|))
 import qualified Game.Draw as Draw
 import qualified Game.Resource as Resource
-import Game.Types (AppState (..), Game (Game), Load (..), Textures (..), Title (Title), appState, bar, cursor, drawer, textures, titleState, window)
+import Game.Types (AppState (..), Game (Game), Load (..), Textures (..), Title (Title), TitleCusor (..), appState, bar, close, cursor, drawer, textures, titleState, window)
 import Lens.Micro (Lens', (^.))
-import Lens.Micro.Mtl (use, zoom, (%=), (+=), (-=), (.=))
+import Lens.Micro.Mtl (use, zoom, (%=), (.=))
 import qualified Music
-import Raylib.Core (clearBackground, closeWindow, fileExists, getFrameTime, getScreenHeight, getScreenWidth, initWindow, isKeyPressed, setTargetFPS, setTraceLogLevel, toggleBorderlessWindowed, windowShouldClose)
+import Raylib.Core (clearBackground, closeWindow, fileExists, getFrameTime, getScreenHeight, getScreenWidth, initWindow, isKeyPressed, setTargetFPS, setTraceLogLevel, toggleBorderlessWindowed)
 import Raylib.Core.Audio (initAudioDevice)
-import Raylib.Types (KeyboardKey (KeyDown, KeyLeft, KeyRight, KeyUp), TraceLogLevel (LogNone))
+import Raylib.Types (KeyboardKey (KeyDown, KeyEnter, KeyEscape, KeyLeft, KeyRight, KeyUp), TraceLogLevel (LogNone))
 import Raylib.Util (drawing)
 import Raylib.Util.Colors (black)
 import Prelude hiding (init)
@@ -51,23 +51,31 @@ init = do
   setTargetFPS 60
   setTraceLogLevel LogNone
   let drawTexture = Draw.texture config'
-  return $ Game w config' (drawTexture, Draw.text drawTexture ts.font) Music.list ts InitState
+  return $ Game w config' False (drawTexture, Draw.text drawTexture ts.font) Music.list ts InitState
 
 update :: StateT Game IO ()
 update = do
   state <- use appState
   dt <- lift getFrameTime
   case state of
-    InitState -> appState .= TitleState (Title 0 (Animation.init (Draw.vec (-40) 40)))
-    TitleState tit ->
-      zoom (appState . titleState) $ do
-        whenM (((tit ^. cursor > 0) &&) <$> orM [lift $ isKeyPressed KeyUp, lift $ isKeyPressed KeyLeft]) $ do
-          b <- bar %?= Animation.to (Animation.get (tit ^. bar) |-| Draw.vec 0 13) (Draw.vec 0 (-50))
-          cursor -= fromEnum b
-        whenM (((tit ^. cursor < 2) &&) <$> orM [lift $ isKeyPressed KeyDown, lift $ isKeyPressed KeyRight]) $ do
-          b <- bar %?= Animation.to (Animation.get (tit ^. bar) |+| Draw.vec 0 13) (Draw.vec 0 50)
-          cursor += fromEnum b
-        bar %= Animation.update dt
+    InitState -> appState .= TitleState (Title Start (Animation.init (Draw.vec (-40) 40)))
+    TitleState tit -> do
+      zoom (appState . titleState) $
+        do
+          whenM (((tit ^. cursor > Start) &&) <$> orM [lift $ isKeyPressed KeyUp, lift $ isKeyPressed KeyLeft]) $ do
+            b <- bar %?= Animation.to (Animation.get (tit ^. bar) |-| Draw.vec 0 13) (Draw.vec 0 (-50))
+            when b $ cursor %= pred
+          whenM (((tit ^. cursor < Quit) &&) <$> orM [lift $ isKeyPressed KeyDown, lift $ isKeyPressed KeyRight]) $ do
+            b <- bar %?= Animation.to (Animation.get (tit ^. bar) |+| Draw.vec 0 13) (Draw.vec 0 50)
+            when b $ cursor %= succ
+          bar %= Animation.update dt
+      whenM
+        (lift $ isKeyPressed KeyEnter)
+        $ case tit ^. cursor of
+          Start -> undefined
+          HiScore -> undefined
+          Quit -> close .= True
+      whenM (lift $ isKeyPressed KeyEscape) (close .= True)
     LoadState ld -> do
       whenJustM (lift $ Resource.get ld.sounds) (\_ -> return ())
 
@@ -104,7 +112,7 @@ draw = do
       _ -> return ()
 
 shouldClose :: StateT Game IO Bool
-shouldClose = lift windowShouldClose
+shouldClose = use close
 
 teardown :: StateT Game IO ()
 teardown = do
