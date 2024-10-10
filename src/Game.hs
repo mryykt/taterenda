@@ -79,10 +79,10 @@ update = do
     SelectState _ -> do
       whenM
         (lift $ isKeyPressed KeyRight)
-        $ zoom musicList Music.next
+        $ musicList %= Music.next
       whenM
         (lift $ isKeyPressed KeyLeft)
-        $ zoom musicList Music.prev
+        $ musicList %= Music.prev
       whenM
         (lift $ isKeyPressed KeyEscape)
         (appState .= initTitle)
@@ -124,7 +124,7 @@ draw = do
         dtext "HISCORE" (Draw.vec 0 53) True
         dtext "QUIT" (Draw.vec 0 66) True
       SelectState _ -> do
-        let (_, (index, _, _), _) = ml
+        let (index, _) = Music.current ml
         dtexture t.select (Draw.vec (-60) (-80)) (Draw.rect (1 + 121 * int2Float (index `mod` 8)) (1 + 223 * int2Float (index `div` 8)) 120 160)
         return ()
       _ -> return ()
