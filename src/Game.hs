@@ -15,7 +15,7 @@ import Game.Config (Config (..), defConfig)
 import Game.Draw ((|+|), (|-|))
 import qualified Game.Draw as Draw
 import qualified Game.Resource as Resource
-import Game.Types (AppState (..), Game (Game), Load (..), Textures (..), Title (Title), TitleCusor (..), appState, bar, close, cursor, drawer, textures, titleState, window)
+import Game.Types (AppState (..), Game (Game), Load (..), Select (Select), Textures (..), Title (Title), TitleCusor (..), appState, bar, close, cursor, drawer, musicList, textures, titleState, window)
 import Lens.Micro (Lens', (^.))
 import Lens.Micro.Mtl (use, zoom, (%=), (.=))
 import qualified Music
@@ -58,7 +58,7 @@ update = do
   state <- use appState
   dt <- lift getFrameTime
   case state of
-    InitState -> appState .= TitleState (Title Start (Animation.init (Draw.vec (-40) 40)))
+    InitState -> appState .= initTitle
     TitleState tit -> do
       zoom (appState . titleState) $
         do
@@ -72,12 +72,25 @@ update = do
       whenM
         (lift $ isKeyPressed KeyEnter)
         $ case tit ^. cursor of
-          Start -> undefined
+          Start -> appState .= SelectState (Select (Animation.init (Draw.vec 0 0)) (Animation.init (Draw.vec 0 0)))
           HiScore -> undefined
           Quit -> close .= True
       whenM (lift $ isKeyPressed KeyEscape) (close .= True)
+    SelectState _ -> do
+      whenM
+        (lift $ isKeyPressed KeyRight)
+        $ zoom musicList Music.next
+      whenM
+        (lift $ isKeyPressed KeyLeft)
+        $ zoom musicList Music.prev
+      whenM
+        (lift $ isKeyPressed KeyEscape)
+        (appState .= initTitle)
     LoadState ld -> do
       whenJustM (lift $ Resource.get ld.sounds) (\_ -> return ())
+
+initTitle :: AppState
+initTitle = TitleState (Title Start (Animation.init (Draw.vec (-40) 40)))
 
 (%?=) :: Lens' a b -> (b -> Maybe b) -> StateT a IO Bool
 l %?= f = do
@@ -99,6 +112,7 @@ draw :: StateT Game IO ()
 draw = do
   (dtexture, dtext) <- use drawer
   t <- use textures
+  ml <- use musicList
   state <- use appState
   lift $ drawing $ do
     clearBackground black
@@ -109,6 +123,10 @@ draw = do
         dtext "START" (Draw.vec 0 40) True
         dtext "HISCORE" (Draw.vec 0 53) True
         dtext "QUIT" (Draw.vec 0 66) True
+      SelectState _ -> do
+        let (_, (index, _, _), _) = ml
+        dtexture t.select (Draw.vec (-60) (-80)) (Draw.rect (1 + 121 * int2Float (index `mod` 8)) (1 + 223 * int2Float (index `div` 8)) 120 160)
+        return ()
       _ -> return ()
 
 shouldClose :: StateT Game IO Bool

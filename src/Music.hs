@@ -5,7 +5,7 @@ import Data.IntMap (IntMap)
 import Data.Tuple.Extra (second3, snd3)
 import qualified Music.Sounds as Sounds
 
-type MusicList = ([Select], (Music, Select), [Select])
+type MusicList = ([Select], (Int, Music, Select), [Select])
 
 data Select = Select {normal :: Music, another :: Maybe Music}
 
@@ -23,36 +23,36 @@ instance Eq Music where
   m1 == m2 = m1.name == m2.name
 
 current :: StateT MusicList IO Music
-current = gets (fst . snd3)
+current = gets (snd3 . snd3)
 
 prev :: StateT MusicList IO ()
 prev = modify' f
   where
-    f (a : b, (_, c), d) = (b, (a.normal, a), c : d)
+    f (a : b, (i, _, c), d) = (b, (i - 1, a.normal, a), c : d)
     f x = x
 
 next :: StateT MusicList IO ()
 next = modify' f
   where
-    f (a, (_, b), c : d) = (b : a, (c.normal, c), d)
+    f (a, (i, _, b), c : d) = (b : a, (i + 1, c.normal, c), d)
     f x = x
 
 selectAnother :: StateT MusicList IO ()
 selectAnother = modify' f
   where
-    f ml@(_, (_, m), _) = case m.another of
-      Just a -> second3 (const (a, m)) ml
+    f ml@(_, (i, _, m), _) = case m.another of
+      Just a -> second3 (const (i, a, m)) ml
       Nothing -> ml
 
 selectNormal :: StateT MusicList IO ()
 selectNormal = modify' f
   where
-    f ml@(_, (_, m), _) = second3 (const (m.normal, m)) ml
+    f ml@(_, (i, _, m), _) = second3 (const (i, m.normal, m)) ml
 
 list :: MusicList
 list =
   ( []
-  , (frozen, Select frozen Nothing)
+  , (0, frozen, Select frozen Nothing)
   ,
     [ Select zionia Nothing
     , Select grave (Just graveA)

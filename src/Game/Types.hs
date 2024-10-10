@@ -29,11 +29,13 @@ data Textures = Textures
   , title :: Texture
   }
 
-data AppState = InitState | TitleState Title | LoadState Load
+data AppState = InitState | TitleState Title | SelectState Select | LoadState Load
 
 data Title = Title {_cursor :: TitleCusor, _bar :: Animation}
 
 data TitleCusor = Start | HiScore | Quit deriving (Eq, Ord, Enum)
+
+data Select = Select {_left :: Animation, _right :: Animation}
 
 data Load = Load {_tateren :: Tateren, sounds :: Loader IntMap Sound}
 
