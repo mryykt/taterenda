@@ -24,6 +24,7 @@ import Raylib.Core.Audio (initAudioDevice)
 import Raylib.Types (KeyboardKey (KeyDown, KeyEnter, KeyEscape, KeyLeft, KeyRight, KeyUp), TraceLogLevel (LogNone))
 import Raylib.Util (drawing)
 import Raylib.Util.Colors (black)
+import Text.Printf (printf)
 import Prelude hiding (init)
 
 mainLoop :: IO ()
@@ -124,8 +125,19 @@ draw = do
         dtext "HISCORE" (Draw.vec 0 53) True
         dtext "QUIT" (Draw.vec 0 66) True
       SelectState _ -> do
-        let (index, _) = Music.current ml
+        let (index, music) = Music.current ml
         dtexture t.select (Draw.vec (-60) (-80)) (Draw.rect (1 + 121 * int2Float (index `mod` 8)) (1 + 223 * int2Float (index `div` 8)) 120 160)
+        dtexture t.select (Draw.vec (-40) (-30)) (Draw.rect (1 + 81 * int2Float (index `mod` 8)) (162 + 223 * int2Float (index `div` 8)) 80 30)
+        when (index > 0) $ dtexture t.select (Draw.vec (-60) (-20)) (Draw.rect 649 162 13 11)
+        when (index < 15) $ dtexture t.select (Draw.vec 47 (-20)) (Draw.rect 663 162 13 11)
+        dtext (printf "%02d/16" (index + 1)) (Draw.vec 0 (-75)) True
+        dtext (printf "HiScore:XXXX") (Draw.vec 0 (-60)) True
+        dtext (maybe "????" (`replicate` '*') music.difficulty) (Draw.vec 0 (-45)) True
+        dtext "-TITLE--------" (Draw.vec 0 5) True
+        dtext music.name (Draw.vec (-56) 15) False
+        dtext "-ARTIST-------" (Draw.vec 0 35) True
+        dtext music.artist (Draw.vec (-56) 45) False
+        dtext (printf "BPM:%d" (round music.bpm :: Int)) (Draw.vec (-56) 65) False
         return ()
       _ -> return ()
 
