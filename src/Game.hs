@@ -15,7 +15,7 @@ import Game.Config (Config (..), defConfig)
 import Game.Draw ((|+|), (|-|))
 import qualified Game.Draw as Draw
 import qualified Game.Resource as Resource
-import Game.Types (AppState (..), Game (Game), Load (..), Select (Select), Textures (..), Title (Title), TitleCusor (..), appState, bar, close, cursor, drawer, musicList, textures, titleState, window)
+import Game.Types (AppState (..), Game (Game), HasTateren (tateren), Load (..), Play (Play), Select (Select), Textures (..), Title (Title), TitleCusor (..), appState, bar, close, cursor, drawer, musicList, sounds, textures, titleState, window)
 import Lens.Micro (Lens', (^.))
 import Lens.Micro.Mtl (use, zoom, (%=), (.=))
 import qualified Music
@@ -24,6 +24,8 @@ import Raylib.Core.Audio (initAudioDevice)
 import Raylib.Types (KeyboardKey (KeyDown, KeyEnter, KeyEscape, KeyLeft, KeyRight, KeyUp), TraceLogLevel (LogNone))
 import Raylib.Util (drawing)
 import Raylib.Util.Colors (black)
+import System.FilePath ((</>))
+import qualified Tateren
 import Text.Printf (printf)
 import Prelude hiding (init)
 
@@ -73,7 +75,7 @@ update = do
       whenM
         (lift $ isKeyPressed KeyEnter)
         $ case tit ^. cursor of
-          Start -> appState .= SelectState (Select (Animation.init (Draw.vec 0 0)) (Animation.init (Draw.vec 0 0)))
+          Start -> appState .= initSelect
           HiScore -> undefined
           Quit -> close .= True
       whenM (lift $ isKeyPressed KeyEscape) (close .= True)
@@ -85,13 +87,27 @@ update = do
         (lift $ isKeyPressed KeyLeft)
         $ musicList %= Music.prev
       whenM
+        (lift $ isKeyPressed KeyEnter)
+        $ do
+          (_, curr) <- Music.current <$> use musicList
+          let dir = "sound" </> curr.directory
+          tate <- lift $ Tateren.load $ dir </> curr.chart
+          loader <- lift $ Resource.soundLoader $ (dir </>) <$> curr.sounds
+          appState .= LoadState (Load tate loader)
+          return ()
+      whenM
         (lift $ isKeyPressed KeyEscape)
         (appState .= initTitle)
     LoadState ld -> do
-      whenJustM (lift $ Resource.get ld.sounds) (\_ -> return ())
+      whenJustM (lift $ Resource.get (ld ^. sounds)) (\s -> appState .= PlayState (Play (ld ^. tateren) s))
+    PlayState _ ->
+      whenM (lift $ isKeyPressed KeyEscape) (appState .= initSelect)
 
 initTitle :: AppState
 initTitle = TitleState (Title Start (Animation.init (Draw.vec (-40) 40)))
+
+initSelect :: AppState
+initSelect = SelectState (Select (Animation.init (Draw.vec 0 0)) (Animation.init (Draw.vec 0 0)))
 
 (%?=) :: Lens' a b -> (b -> Maybe b) -> StateT a IO Bool
 l %?= f = do

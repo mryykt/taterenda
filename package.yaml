@@ -39,6 +39,7 @@ default-extensions:
   - FunctionalDependencies
   - OverloadedRecordDot
   - RankNTypes
+  - FlexibleInstances
 
 library:
   source-dirs: src

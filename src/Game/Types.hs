@@ -6,7 +6,7 @@ import Game.Config (Config)
 import Game.Draw (Rectangle, Texture, Vector)
 import Game.Resource (Loader)
 import Lens.Micro (Lens', lens)
-import Lens.Micro.TH (makeLenses)
+import Lens.Micro.TH (makeFields, makeLenses)
 import Music (MusicList)
 import Raylib.Types (Sound)
 import Raylib.Util (WindowResources)
@@ -29,7 +29,7 @@ data Textures = Textures
   , title :: Texture
   }
 
-data AppState = InitState | TitleState Title | SelectState Select | LoadState Load
+data AppState = InitState | TitleState Title | SelectState Select | LoadState Load | PlayState Play
 
 data Title = Title {_cursor :: TitleCusor, _bar :: Animation}
 
@@ -37,10 +37,14 @@ data TitleCusor = Start | HiScore | Quit deriving (Eq, Ord, Enum)
 
 data Select = Select {_left :: Animation, _right :: Animation}
 
-data Load = Load {_tateren :: Tateren, sounds :: Loader IntMap Sound}
+data Load = Load {_loadTateren :: Tateren, _loadSounds :: Loader IntMap Sound}
+
+data Play = Play {_playTateren :: Tateren, _playSounds :: IntMap Sound}
 
 makeLenses ''Game
 makeLenses ''Title
+makeFields ''Load
+makeFields ''Play
 
 titleState :: Lens' AppState Title
 titleState = lens getter setter
