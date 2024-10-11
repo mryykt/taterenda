@@ -99,8 +99,9 @@ update = do
         (lift $ isKeyPressed KeyEscape)
         (appState .= initTitle)
     LoadState ld -> do
-      whenJustM (lift $ Resource.get (ld ^. sounds)) (\s -> appState .= PlayState (Play (ld ^. tateren) s))
-    PlayState _ ->
+      (_, music) <- Music.current <$> use musicList
+      whenJustM (lift $ Resource.get (ld ^. sounds)) (\s -> appState .= PlayState (Play (Time.fromInt 0) music.bpm (ld ^. tateren) s))
+    PlayState pl -> do
       whenM (lift $ isKeyPressed KeyEscape) (appState .= initSelect)
 
 initTitle :: AppState

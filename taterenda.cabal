@@ -36,6 +36,7 @@ library
       Tateren
       Tateren.Decoder
       Tateren.Types
+      Time
   other-modules:
       Paths_taterenda
   autogen-modules:

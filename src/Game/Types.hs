@@ -11,6 +11,7 @@ import Music (MusicList)
 import Raylib.Types (Sound)
 import Raylib.Util (WindowResources)
 import Tateren.Types (Tateren)
+import Time (HasTime (time), Time)
 
 data Game = Game
   { _window :: WindowResources
@@ -39,7 +40,7 @@ data Select = Select {_left :: Animation, _right :: Animation}
 
 data Load = Load {_loadTateren :: Tateren, _loadSounds :: Loader IntMap Sound}
 
-data Play = Play {_playTateren :: Tateren, _playSounds :: IntMap Sound}
+data Play = Play {_playTime :: Time, _playCurrentBpm :: Float, _playTateren :: Tateren, _playSounds :: IntMap Sound}
 
 makeLenses ''Game
 makeLenses ''Title
@@ -52,4 +53,12 @@ titleState = lens getter setter
     getter (TitleState x) = x
     getter _ = error "error"
     setter (TitleState _) y = TitleState y
+    setter _ _ = undefined
+
+playState :: Lens' AppState Play
+playState = lens getter setter
+  where
+    getter (PlayState x) = x
+    getter _ = undefined
+    setter (PlayState _) y = PlayState y
     setter _ _ = undefined
