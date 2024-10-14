@@ -8,6 +8,7 @@ import Control.Monad.State.Strict
   )
 import Data.Aeson.Micro (decodeStrict, encodeStrict)
 import qualified Data.ByteString as BS
+import Data.IntMap ((!?))
 import Data.Maybe (fromMaybe)
 import GHC.Float (int2Float)
 import qualified Game.Animation as Animation
@@ -15,18 +16,22 @@ import Game.Config (Config (..), defConfig)
 import Game.Draw ((|+|), (|-|))
 import qualified Game.Draw as Draw
 import qualified Game.Resource as Resource
-import Game.Types (AppState (..), Game (Game), HasTateren (tateren), Load (..), Play (Play), Select (Select), Textures (..), Title (Title), TitleCusor (..), appState, bar, close, cursor, drawer, musicList, sounds, textures, titleState, window)
+import Game.Types (AppState (..), Game (Game), Load (..), Play (Play), Select (Select), Textures (..), Title (Title), TitleCusor (..), appState, bar, close, currentBpm, cursor, drawer, musicList, playState, sounds, tateren, textures, titleState, window)
 import Lens.Micro (Lens', (^.))
 import Lens.Micro.Mtl (use, zoom, (%=), (.=))
+import Music (bpm)
 import qualified Music
 import Raylib.Core (clearBackground, closeWindow, fileExists, getFrameTime, getScreenHeight, getScreenWidth, initWindow, isKeyPressed, setTargetFPS, setTraceLogLevel, toggleBorderlessWindowed)
-import Raylib.Core.Audio (initAudioDevice)
+import Raylib.Core.Audio (initAudioDevice, playSound, unloadSound)
 import Raylib.Types (KeyboardKey (KeyDown, KeyEnter, KeyEscape, KeyLeft, KeyRight, KeyUp), TraceLogLevel (LogNone))
 import Raylib.Util (drawing)
 import Raylib.Util.Colors (black)
 import System.FilePath ((</>))
 import qualified Tateren
+import Tateren.Types (bgms, notes, value)
 import Text.Printf (printf)
+import Time (HasTime (time))
+import qualified Time
 import Prelude hiding (init)
 
 mainLoop :: IO ()
@@ -58,6 +63,7 @@ init = do
 
 update :: StateT Game IO ()
 update = do
+  w <- use window
   state <- use appState
   dt <- lift getFrameTime
   case state of
@@ -100,9 +106,15 @@ update = do
         (appState .= initTitle)
     LoadState ld -> do
       (_, music) <- Music.current <$> use musicList
-      whenJustM (lift $ Resource.get (ld ^. sounds)) (\s -> appState .= PlayState (Play (Time.fromInt 0) music.bpm (ld ^. tateren) s))
+      whenJustM (lift $ Resource.get (ld ^. sounds)) (\s -> appState .= PlayState (Play (Time.fromInt 0) music.bpm (ld ^. tateren) [] s))
     PlayState pl -> do
-      whenM (lift $ isKeyPressed KeyEscape) (appState .= initSelect)
+      zoom (appState . playState) $ do
+        t <- use time
+        time %= Time.update dt (pl ^. currentBpm)
+        sounds1 <- (tateren . bgms) >%= Time.get t
+        lift $ do
+          mapM_ (maybe (return ()) playSound . ((pl ^. sounds) !?) . (^. value)) sounds1
+      whenM (lift $ isKeyPressed KeyEscape) (lift (mapM_ (`unloadSound` w) (pl ^. sounds)) >> appState .= initSelect)
 
 initTitle :: AppState
 initTitle = TitleState (Title Start (Animation.init (Draw.vec (-40) 40)))
@@ -118,13 +130,11 @@ l %?= f = do
     Just y' -> l .= y' >> return True
     Nothing -> return False
 
-{-
-curr <- zoom musicList Music.current
-let dir = "sound" </> curr.directory
-tate <- lift $ Tateren.load $ dir </> curr.chart
-loader <- lift $ Resource.soundLoader $ (dir </>) <$> curr.sounds
-appState .= LoadState (Load tate loader)
--}
+(>%=) :: Lens' a b -> (b -> (b, b)) -> StateT a IO b
+l >%= f = do
+  x <- use l
+  let (y1, y2) = f x
+  l .= y2 >> return y1
 
 draw :: StateT Game IO ()
 draw = do
