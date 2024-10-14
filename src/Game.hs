@@ -35,6 +35,7 @@ import Game.Types
   , drawer
   , keys
   , musicList
+  , playMeasures
   , playNotes
   , playState
   , sounds
@@ -54,7 +55,7 @@ import Raylib.Util (drawing)
 import Raylib.Util.Colors (black)
 import System.FilePath ((</>))
 import qualified Tateren
-import Tateren.Types (Key (..), bgms, bpmChanges, key, notes, value)
+import Tateren.Types (Key (..), bgms, bpmChanges, key, measures, notes, value)
 import Text.Printf (printf)
 import Time (HasTime (time))
 import qualified Time
@@ -132,7 +133,7 @@ update = do
         (appState .= initTitle)
     LoadState ld -> do
       (_, music) <- Music.current <$> use musicList
-      whenJustM (lift $ Resource.get (ld ^. sounds)) (\s -> appState .= PlayState (Play (Time.fromInt 0) music.bpm (ld ^. tateren) [] Set.empty s))
+      whenJustM (lift $ Resource.get (ld ^. sounds)) (\s -> appState .= PlayState (Play (Time.fromInt 0) music.bpm (ld ^. tateren) [] [] Set.empty s))
     PlayState pl -> do
       zoom (appState . playState) $ do
         keys .= Set.empty
@@ -140,8 +141,10 @@ update = do
         time %= Time.update dt (pl ^. currentBpm)
         sounds1 <- (tateren . bgms) >%= Time.get t
         notes1 <- (tateren . notes) >%= Time.get (t + 0xc0 * 2)
+        measures1 <- (tateren . measures) >%= Time.get (t + 0xc0 * 2)
         bpmChanges1 <- (tateren . bpmChanges) >%= Time.get t
         playNotes %= ((++ notes1) . dropWhile ((t >) . (^. time)))
+        playMeasures %= ((++ measures1) . dropWhile ((t >) . (^. time)))
         currentBpm %= (\b -> maybe b (int2Float . (^. value)) $ listToMaybe bpmChanges1)
         let
           f k x = if x ^. key == k then Just x else Nothing
@@ -216,12 +219,15 @@ draw = do
                 K1 -> (26 - 60, Draw.rect 139 1 9 139)
                 K2 -> (36 - 60, Draw.rect 139 1 9 139)
           dtexture t.skin (Draw.vec x (-80)) range
+        let y ot = (141 - (141 / (0xc0 * 2) * Time.toFloat (ot - pl ^. time))) - 82
+        forM_ (pl ^. playMeasures) $ \m -> do
+          dtexture t.skin (Draw.vec (8 - 60) (y (m ^. time) + 1)) (Draw.rect 9 162 38 1)
         forM_ (pl ^. playNotes) $ \n -> do
           let (x, range) = case n ^. key of
                 Sc -> (9 - 60, Draw.rect 122 141 16 2)
                 K1 -> (26 - 60, Draw.rect 139 141 9 2)
                 K2 -> (36 - 60, Draw.rect 139 141 9 2)
-          dtexture t.skin (Draw.vec x ((141 - (141 / (0xc0 * 2) * Time.toFloat (n ^. time - pl ^. time))) - 82)) range
+          dtexture t.skin (Draw.vec x (y (n ^. time))) range
       _ -> return ()
 
 shouldClose :: StateT Game IO Bool

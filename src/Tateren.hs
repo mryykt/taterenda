@@ -1,6 +1,5 @@
 module Tateren (load) where
 
-import qualified Data.IntMap as IM
 import GHC.Float (int2Float)
 import Lens.Micro ((%~), (&), (.~))
 import Tateren.Decoder
@@ -27,7 +26,7 @@ import qualified Time
 fromRawData :: RawChart -> Tateren
 fromRawData (RawChart cs mss _) = def & measures .~ ms & flip (foldr convertCommands) cs
   where
-    ms = IM.fromList $ zip [1 ..] $ (\(MeasureStart l s) -> Measure (int2Float l) (Time.fromInt s)) <$> mss
+    ms = (\(MeasureStart l s) -> Measure (int2Float l) (Time.fromInt s)) <$> mss
     convertCommands (Command typ t v _ _) = case typ of
       0 -> bgms %~ (Bgm (Time.fromInt t) v :)
       1 -> bpmChanges %~ (BpmChange (Time.fromInt t) v :)

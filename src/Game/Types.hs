@@ -11,7 +11,7 @@ import Lens.Micro.TH (makeFields, makeLenses)
 import Music (MusicList)
 import Raylib.Types (Sound)
 import Raylib.Util (WindowResources)
-import Tateren.Types (Key, Note, Tateren)
+import Tateren.Types (Key, Measure, Note, Tateren)
 import Time (HasTime (time), Time)
 
 data Game = Game
@@ -41,7 +41,7 @@ data Select = Select {_left :: Animation, _right :: Animation}
 
 data Load = Load {_loadTateren :: Tateren, _loadSounds :: Loader IntMap Sound}
 
-data Play = Play {_playTime :: Time, _playCurrentBpm :: Float, _playTateren :: Tateren, _playPlayNotes :: [Note], _playKeys :: Set Key, _playSounds :: IntMap Sound}
+data Play = Play {_playTime :: Time, _playCurrentBpm :: Float, _playTateren :: Tateren, _playPlayNotes :: [Note], _playPlayMeasures :: [Measure], _playKeys :: Set Key, _playSounds :: IntMap Sound}
 
 makeLenses ''Game
 makeLenses ''Title
