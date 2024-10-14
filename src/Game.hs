@@ -10,7 +10,7 @@ import Data.Aeson.Micro (decodeStrict, encodeStrict)
 import qualified Data.ByteString as BS
 import Data.IntMap ((!?))
 import Data.List.Extra (firstJust)
-import Data.Maybe (fromMaybe)
+import Data.Maybe (fromMaybe, listToMaybe)
 import qualified Data.Set as Set
 import GHC.Float (int2Float)
 import qualified Game.Animation as Animation
@@ -54,7 +54,7 @@ import Raylib.Util (drawing)
 import Raylib.Util.Colors (black)
 import System.FilePath ((</>))
 import qualified Tateren
-import Tateren.Types (Key (..), bgms, key, notes, value)
+import Tateren.Types (Key (..), bgms, bpmChanges, key, notes, value)
 import Text.Printf (printf)
 import Time (HasTime (time))
 import qualified Time
@@ -140,7 +140,9 @@ update = do
         time %= Time.update dt (pl ^. currentBpm)
         sounds1 <- (tateren . bgms) >%= Time.get t
         notes1 <- (tateren . notes) >%= Time.get (t + 0xc0 * 2)
+        bpmChanges1 <- (tateren . bpmChanges) >%= Time.get t
         playNotes %= ((++ notes1) . dropWhile ((t >) . (^. time)))
+        currentBpm %= (\b -> maybe b (int2Float . (^. value)) $ listToMaybe bpmChanges1)
         let
           f k x = if x ^. key == k then Just x else Nothing
           keySound k = case (firstJust (f k) $ pl ^. playNotes, firstJust (f k) (pl ^. tateren . notes)) of
