@@ -1,6 +1,6 @@
 module Game (mainLoop) where
 
-import Control.Monad.Extra (notM, orM, when, whenJustM, whenM, whileM)
+import Control.Monad.Extra (forM_, notM, orM, when, whenJustM, whenM, whileM)
 import Control.Monad.State.Strict
   ( StateT
   , evalStateT
@@ -16,7 +16,30 @@ import Game.Config (Config (..), defConfig)
 import Game.Draw ((|+|), (|-|))
 import qualified Game.Draw as Draw
 import qualified Game.Resource as Resource
-import Game.Types (AppState (..), Game (Game), Load (..), Play (Play), Select (Select), Textures (..), Title (Title), TitleCusor (..), appState, bar, close, currentBpm, cursor, drawer, musicList, playState, sounds, tateren, textures, titleState, window)
+import Game.Types
+  ( AppState (..)
+  , Game (Game)
+  , Load (..)
+  , Play (Play)
+  , Select (Select)
+  , Textures (..)
+  , Title (Title)
+  , TitleCusor (..)
+  , appState
+  , bar
+  , close
+  , currentBpm
+  , cursor
+  , drawer
+  , musicList
+  , playNotes
+  , playState
+  , sounds
+  , tateren
+  , textures
+  , titleState
+  , window
+  )
 import Lens.Micro (Lens', (^.))
 import Lens.Micro.Mtl (use, zoom, (%=), (.=))
 import Music (bpm)
@@ -28,7 +51,7 @@ import Raylib.Util (drawing)
 import Raylib.Util.Colors (black)
 import System.FilePath ((</>))
 import qualified Tateren
-import Tateren.Types (bgms, notes, value)
+import Tateren.Types (Key (..), bgms, key, notes, value)
 import Text.Printf (printf)
 import Time (HasTime (time))
 import qualified Time
@@ -112,6 +135,8 @@ update = do
         t <- use time
         time %= Time.update dt (pl ^. currentBpm)
         sounds1 <- (tateren . bgms) >%= Time.get t
+        notes1 <- (tateren . notes) >%= Time.get (t + 0xc0 * 2)
+        playNotes %= ((++ notes1) . dropWhile ((t >) . (^. time)))
         lift $ do
           mapM_ (maybe (return ()) playSound . ((pl ^. sounds) !?) . (^. value)) sounds1
       whenM (lift $ isKeyPressed KeyEscape) (lift (mapM_ (`unloadSound` w) (pl ^. sounds)) >> appState .= initSelect)
@@ -167,6 +192,12 @@ draw = do
         dtext (printf "BPM:%d" (round music.bpm :: Int)) (Draw.vec (-56) 65) False
       PlayState pl -> do
         dtexture t.skin (Draw.vec (-60) (-80)) (Draw.rect 1 1 120 160)
+        forM_ (pl ^. playNotes) $ \n -> do
+          let (x, range) = case n ^. key of
+                Sc -> (9 - 60, Draw.rect 122 141 16 2)
+                K1 -> (26 - 60, Draw.rect 139 141 9 2)
+                K2 -> (36 - 60, Draw.rect 139 141 9 2)
+          dtexture t.skin (Draw.vec x ((141 - (141 / (0xc0 * 2) * Time.toFloat (n ^. time - pl ^. time))) - 82)) range
       _ -> return ()
 
 shouldClose :: StateT Game IO Bool
