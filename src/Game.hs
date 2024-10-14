@@ -11,6 +11,7 @@ import qualified Data.ByteString as BS
 import Data.IntMap ((!?))
 import Data.List.Extra (firstJust)
 import Data.Maybe (fromMaybe)
+import qualified Data.Set as Set
 import GHC.Float (int2Float)
 import qualified Game.Animation as Animation
 import Game.Config (Config (..), defConfig)
@@ -32,6 +33,7 @@ import Game.Types
   , currentBpm
   , cursor
   , drawer
+  , keys
   , musicList
   , playNotes
   , playState
@@ -45,7 +47,7 @@ import Lens.Micro (Lens', (^.))
 import Lens.Micro.Mtl (use, zoom, (%=), (.=))
 import Music (bpm)
 import qualified Music
-import Raylib.Core (clearBackground, closeWindow, fileExists, getFrameTime, getScreenHeight, getScreenWidth, initWindow, isKeyPressed, setTargetFPS, setTraceLogLevel, toggleBorderlessWindowed)
+import Raylib.Core (clearBackground, closeWindow, fileExists, getFrameTime, getScreenHeight, getScreenWidth, initWindow, isKeyDown, isKeyPressed, setTargetFPS, setTraceLogLevel, toggleBorderlessWindowed)
 import Raylib.Core.Audio (initAudioDevice, playSound, unloadSound)
 import Raylib.Types (KeyboardKey (KeyDown, KeyEnter, KeyEscape, KeyLeft, KeyLeftShift, KeyRight, KeyUp, KeyX, KeyZ), TraceLogLevel (LogNone))
 import Raylib.Util (drawing)
@@ -130,9 +132,10 @@ update = do
         (appState .= initTitle)
     LoadState ld -> do
       (_, music) <- Music.current <$> use musicList
-      whenJustM (lift $ Resource.get (ld ^. sounds)) (\s -> appState .= PlayState (Play (Time.fromInt 0) music.bpm (ld ^. tateren) [] s))
+      whenJustM (lift $ Resource.get (ld ^. sounds)) (\s -> appState .= PlayState (Play (Time.fromInt 0) music.bpm (ld ^. tateren) [] Set.empty s))
     PlayState pl -> do
       zoom (appState . playState) $ do
+        keys .= Set.empty
         t <- use time
         time %= Time.update dt (pl ^. currentBpm)
         sounds1 <- (tateren . bgms) >%= Time.get t
@@ -147,6 +150,9 @@ update = do
         whenM (lift $ isKeyPressed KeyLeftShift) (lift $ keySound Sc)
         whenM (lift $ isKeyPressed KeyZ) (lift $ keySound K1)
         whenM (lift $ isKeyPressed KeyX) (lift $ keySound K2)
+        whenM (lift $ isKeyDown KeyLeftShift) (keys %= Set.insert Sc)
+        whenM (lift $ isKeyDown KeyZ) (keys %= Set.insert K1)
+        whenM (lift $ isKeyDown KeyX) (keys %= Set.insert K2)
         lift $ do
           mapM_ (maybe (return ()) playSound . ((pl ^. sounds) !?) . (^. value)) sounds1
       whenM (lift $ isKeyPressed KeyEscape) (lift (mapM_ (`unloadSound` w) (pl ^. sounds)) >> appState .= initSelect)
@@ -202,6 +208,12 @@ draw = do
         dtext (printf "BPM:%d" (round music.bpm :: Int)) (Draw.vec (-56) 65) False
       PlayState pl -> do
         dtexture t.skin (Draw.vec (-60) (-80)) (Draw.rect 1 1 120 160)
+        forM_ (pl ^. keys) $ \k -> do
+          let (x, range) = case k of
+                Sc -> (9 - 60, Draw.rect 122 1 16 139)
+                K1 -> (26 - 60, Draw.rect 139 1 9 139)
+                K2 -> (36 - 60, Draw.rect 139 1 9 139)
+          dtexture t.skin (Draw.vec x (-80)) range
         forM_ (pl ^. playNotes) $ \n -> do
           let (x, range) = case n ^. key of
                 Sc -> (9 - 60, Draw.rect 122 141 16 2)

@@ -13,7 +13,7 @@ data Bgm = Bgm {_bgmTime :: Time, _bgmValue :: Int}
 
 data BpmChange = BpmChange {_bpmChangeTime :: Time, _bpmChangeValue :: Int}
 
-data Key = Sc | K1 | K2 deriving (Eq)
+data Key = Sc | K1 | K2 deriving (Eq, Ord)
 
 data Measure = Measure {len :: Float, start :: Time}
 
