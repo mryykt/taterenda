@@ -19,7 +19,7 @@ getRawChart = do
     decodeCommand = Command <$> getInt <*> getInt <*> getInt <*> getInt <*> getInt
     decodeMeasureStart = MeasureStart <$> getInt <*> getInt
     decodeUnknown = Unknown <$> getInt <*> getInt <*> getInt <*> getInt <*> getInt
-  size <- fromEnum <$> getInt16le
+  size <- fromEnum <$> getInt32le
   commands <- replicateM (size + 1) decodeCommand
   size2 <- fromEnum <$> getInt16le
   measureStarts <- replicateM (size2 + 1) decodeMeasureStart
