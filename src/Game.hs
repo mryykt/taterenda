@@ -155,7 +155,8 @@ draw = do
         dtext "-ARTIST-------" (Draw.vec 0 35) True
         dtext music.artist (Draw.vec (-56) 45) False
         dtext (printf "BPM:%d" (round music.bpm :: Int)) (Draw.vec (-56) 65) False
-        return ()
+      PlayState pl -> do
+        dtexture t.skin (Draw.vec (-60) (-80)) (Draw.rect 1 1 120 160)
       _ -> return ()
 
 shouldClose :: StateT Game IO Bool
