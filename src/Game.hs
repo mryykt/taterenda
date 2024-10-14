@@ -9,6 +9,7 @@ import Control.Monad.State.Strict
 import Data.Aeson.Micro (decodeStrict, encodeStrict)
 import qualified Data.ByteString as BS
 import Data.IntMap ((!?))
+import Data.List.Extra (firstJust)
 import Data.Maybe (fromMaybe)
 import GHC.Float (int2Float)
 import qualified Game.Animation as Animation
@@ -46,7 +47,7 @@ import Music (bpm)
 import qualified Music
 import Raylib.Core (clearBackground, closeWindow, fileExists, getFrameTime, getScreenHeight, getScreenWidth, initWindow, isKeyPressed, setTargetFPS, setTraceLogLevel, toggleBorderlessWindowed)
 import Raylib.Core.Audio (initAudioDevice, playSound, unloadSound)
-import Raylib.Types (KeyboardKey (KeyDown, KeyEnter, KeyEscape, KeyLeft, KeyRight, KeyUp), TraceLogLevel (LogNone))
+import Raylib.Types (KeyboardKey (KeyDown, KeyEnter, KeyEscape, KeyLeft, KeyLeftShift, KeyRight, KeyUp, KeyX, KeyZ), TraceLogLevel (LogNone))
 import Raylib.Util (drawing)
 import Raylib.Util.Colors (black)
 import System.FilePath ((</>))
@@ -137,6 +138,15 @@ update = do
         sounds1 <- (tateren . bgms) >%= Time.get t
         notes1 <- (tateren . notes) >%= Time.get (t + 0xc0 * 2)
         playNotes %= ((++ notes1) . dropWhile ((t >) . (^. time)))
+        let
+          f k x = if x ^. key == k then Just x else Nothing
+          keySound k = case (firstJust (f k) $ pl ^. playNotes, firstJust (f k) (pl ^. tateren . notes)) of
+            (Just n, _) -> maybe (return ()) playSound ((pl ^. sounds) !? (n ^. value))
+            (Nothing, Just n) -> maybe (return ()) playSound ((pl ^. sounds) !? (n ^. value))
+            (Nothing, Nothing) -> return ()
+        whenM (lift $ isKeyPressed KeyLeftShift) (lift $ keySound Sc)
+        whenM (lift $ isKeyPressed KeyZ) (lift $ keySound K1)
+        whenM (lift $ isKeyPressed KeyX) (lift $ keySound K2)
         lift $ do
           mapM_ (maybe (return ()) playSound . ((pl ^. sounds) !?) . (^. value)) sounds1
       whenM (lift $ isKeyPressed KeyEscape) (lift (mapM_ (`unloadSound` w) (pl ^. sounds)) >> appState .= initSelect)
