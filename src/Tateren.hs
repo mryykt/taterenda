@@ -12,7 +12,7 @@ import qualified Tateren.Decoder as D
 import Tateren.Types
   ( Bgm (Bgm)
   , BpmChange (BpmChange)
-  , Key (K1, Sc)
+  , Key (..)
   , Measure (Measure)
   , Note (Note)
   , Tateren
@@ -32,7 +32,7 @@ fromRawData (RawChart cs mss _) = def & measures .~ ms & flip (foldr convertComm
       0 -> bgms %~ (Bgm (Time.fromInt t) v :)
       1 -> bpmChanges %~ (BpmChange (Time.fromInt t) v :)
       0xb -> notes %~ (Note K1 (Time.fromInt t) v :)
-      0xc -> notes %~ (Note K1 (Time.fromInt t) v :)
+      0xc -> notes %~ (Note K2 (Time.fromInt t) v :)
       0xd -> notes %~ (Note Sc (Time.fromInt t) v :)
       _ -> error ("ここに来たとしたら実装漏れ:" ++ show typ)
 
