@@ -1,6 +1,6 @@
 module Game (mainLoop) where
 
-import Control.Monad.Extra (forM_, notM, orM, when, whenJustM, whenM, whileM)
+import Control.Monad.Extra (forM_, notM, orM, when, whenJust, whenJustM, whenM, whileM)
 import Control.Monad.State.Strict
   ( StateT
   , evalStateT
@@ -10,7 +10,7 @@ import Data.Aeson.Micro (decodeStrict, encodeStrict)
 import qualified Data.ByteString as BS
 import Data.IntMap ((!?))
 import Data.List.Extra (firstJust)
-import Data.Maybe (fromMaybe, listToMaybe)
+import Data.Maybe (fromMaybe, listToMaybe, mapMaybe)
 import qualified Data.Set as Set
 import GHC.Float (int2Float)
 import qualified Game.Animation as Animation
@@ -21,6 +21,7 @@ import qualified Game.Resource as Resource
 import Game.Types
   ( AppState (..)
   , Game (Game)
+  , HasPlaySounds (playSounds)
   , Load (..)
   , Play (Play)
   , Select (Select)
@@ -133,10 +134,11 @@ update = do
         (appState .= initTitle)
     LoadState ld -> do
       (_, music) <- Music.current <$> use musicList
-      whenJustM (lift $ Resource.get (ld ^. sounds)) (\s -> appState .= PlayState (Play (Time.fromInt 0) music.bpm (ld ^. tateren) [] [] Set.empty s))
+      whenJustM (lift $ Resource.get (ld ^. sounds)) (\s -> appState .= PlayState (Play (Time.fromInt 0) music.bpm (ld ^. tateren) [] [] Set.empty [] s))
     PlayState pl -> do
       zoom (appState . playState) $ do
         keys .= Set.empty
+        playSounds .= []
         t <- use time
         time %= Time.update dt (pl ^. currentBpm)
         sounds1 <- (tateren . bgms) >%= Time.get t
@@ -149,17 +151,16 @@ update = do
         let
           f k x = if x ^. key == k then Just x else Nothing
           keySound k = case (firstJust (f k) $ pl ^. playNotes, firstJust (f k) (pl ^. tateren . notes)) of
-            (Just n, _) -> maybe (return ()) playSound ((pl ^. sounds) !? (n ^. value))
-            (Nothing, Just n) -> maybe (return ()) playSound ((pl ^. sounds) !? (n ^. value))
+            (Just n, _) -> whenJust ((pl ^. sounds) !? (n ^. value)) (\s -> playSounds %= (s :))
+            (Nothing, Just n) -> whenJust ((pl ^. sounds) !? (n ^. value)) (\s -> playSounds %= (s :))
             (Nothing, Nothing) -> return ()
-        whenM (lift $ isKeyPressed KeyLeftShift) (lift $ keySound Sc)
-        whenM (lift $ isKeyPressed KeyZ) (lift $ keySound K1)
-        whenM (lift $ isKeyPressed KeyX) (lift $ keySound K2)
+        whenM (lift $ isKeyPressed KeyLeftShift) (keySound Sc)
+        whenM (lift $ isKeyPressed KeyZ) (keySound K1)
+        whenM (lift $ isKeyPressed KeyX) (keySound K2)
         whenM (lift $ isKeyDown KeyLeftShift) (keys %= Set.insert Sc)
         whenM (lift $ isKeyDown KeyZ) (keys %= Set.insert K1)
         whenM (lift $ isKeyDown KeyX) (keys %= Set.insert K2)
-        lift $ do
-          mapM_ (maybe (return ()) playSound . ((pl ^. sounds) !?) . (^. value)) sounds1
+        playSounds %= (mapMaybe (((pl ^. sounds) !?) . (^. value)) sounds1 ++)
       whenM (lift $ isKeyPressed KeyEscape) (lift (mapM_ (`unloadSound` w) (pl ^. sounds)) >> appState .= initSelect)
 
 initTitle :: AppState
@@ -228,6 +229,7 @@ draw = do
                 K1 -> (26 - 60, Draw.rect 139 141 9 2)
                 K2 -> (36 - 60, Draw.rect 139 141 9 2)
           dtexture t.skin (Draw.vec x (y (n ^. time))) range
+        mapM_ playSound (pl ^. playSounds)
       _ -> return ()
 
 shouldClose :: StateT Game IO Bool
