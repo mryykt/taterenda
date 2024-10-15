@@ -142,8 +142,8 @@ update = do
         t <- use time
         time %= Time.update dt (pl ^. currentBpm)
         sounds1 <- (tateren . bgms) >%= Time.get t
-        notes1 <- (tateren . notes) >%= Time.get (t + 0xc0 * 2)
-        measures1 <- (tateren . measures) >%= Time.get (t + 0xc0 * 2)
+        notes1 <- (tateren . notes) >%= Time.get (t + lengthInDisplay)
+        measures1 <- (tateren . measures) >%= Time.get (t + lengthInDisplay)
         bpmChanges1 <- (tateren . bpmChanges) >%= Time.get t
         playNotes %= ((++ notes1) . dropWhile ((t >) . (^. time)))
         playMeasures %= ((++ measures1) . dropWhile ((t >) . (^. time)))
@@ -220,7 +220,7 @@ draw = do
                 K1 -> (26 - 60, Draw.rect 139 1 9 139)
                 K2 -> (36 - 60, Draw.rect 139 1 9 139)
           dtexture t.skin (Draw.vec x (-80)) range
-        let y ot = (141 - (141 / (0xc0 * 2) * Time.toFloat (ot - pl ^. time))) - 82
+        let y ot = (141 - (141 / lengthInDisplay * Time.toFloat (ot - pl ^. time))) - 82
         forM_ (pl ^. playMeasures) $ \m -> do
           dtexture t.skin (Draw.vec (8 - 60) (y (m ^. time) + 1)) (Draw.rect 9 162 38 1)
         forM_ (pl ^. playNotes) $ \n -> do
@@ -231,6 +231,9 @@ draw = do
           dtexture t.skin (Draw.vec x (y (n ^. time))) range
         mapM_ playSound (pl ^. playSounds)
       _ -> return ()
+
+lengthInDisplay :: (Fractional t) => t
+lengthInDisplay = 0xc0 * 1.5
 
 shouldClose :: StateT Game IO Bool
 shouldClose = use close

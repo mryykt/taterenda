@@ -14,6 +14,10 @@ instance Num Time where
   fromInteger x = Time $ fromInteger x
   negate (Time t) = Time $ negate t
 
+instance Fractional Time where
+  fromRational = Time . fromRational
+  Time t1 / Time t2 = Time (t1 / t2)
+
 {- | >>> update 1 60 (Time 0)
 Time 192.0
 | >>> update 0.5 120 (Time 0)
