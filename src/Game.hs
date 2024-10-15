@@ -9,7 +9,8 @@ import Control.Monad.State.Strict
 import Data.Aeson.Micro (decodeStrict, encodeStrict)
 import qualified Data.ByteString as BS
 import Data.IntMap ((!?))
-import Data.List.Extra (firstJust)
+import Data.List.Extra (firstJust, foldl')
+import qualified Data.Map as Map
 import Data.Maybe (fromMaybe, listToMaybe, mapMaybe)
 import qualified Data.Set as Set
 import GHC.Float (int2Float)
@@ -134,7 +135,7 @@ update = do
         (appState .= initTitle)
     LoadState ld -> do
       (_, music) <- Music.current <$> use musicList
-      whenJustM (lift $ Resource.get (ld ^. sounds)) (\s -> appState .= PlayState (Play (Time.fromInt 0) music.bpm (ld ^. tateren) [] [] Set.empty [] s))
+      whenJustM (lift $ Resource.get (ld ^. sounds)) (\s -> appState .= PlayState (Play (Time.fromInt 0) music.bpm (ld ^. tateren) (Map.fromList [(Sc, []), (K1, []), (K2, [])]) [] Set.empty [] Map.empty s))
     PlayState pl -> do
       zoom (appState . playState) $ do
         keys .= Set.empty
@@ -145,18 +146,20 @@ update = do
         notes1 <- (tateren . notes) >%= Time.get (t + lengthInDisplay)
         measures1 <- (tateren . measures) >%= Time.get (t + lengthInDisplay)
         bpmChanges1 <- (tateren . bpmChanges) >%= Time.get t
-        playNotes %= ((++ notes1) . dropWhile ((t >) . (^. time)))
+        let insertNote n = Map.update (Just . (++ [n])) (n ^. key)
+        playNotes %= (flip (foldl' (flip insertNote)) notes1 . (dropWhile ((t >) . (^. time)) <$>))
         playMeasures %= ((++ measures1) . dropWhile ((t >) . (^. time)))
         currentBpm %= (\b -> maybe b (int2Float . (^. value)) $ listToMaybe bpmChanges1)
         let
           f k x = if x ^. key == k then Just x else Nothing
-          keySound k = case (firstJust (f k) $ pl ^. playNotes, firstJust (f k) (pl ^. tateren . notes)) of
-            (Just n, _) -> whenJust ((pl ^. sounds) !? (n ^. value)) (\s -> playSounds %= (s :))
-            (Nothing, Just n) -> whenJust ((pl ^. sounds) !? (n ^. value)) (\s -> playSounds %= (s :))
-            (Nothing, Nothing) -> return ()
-        whenM (lift $ isKeyPressed KeyLeftShift) (keySound Sc)
-        whenM (lift $ isKeyPressed KeyZ) (keySound K1)
-        whenM (lift $ isKeyPressed KeyX) (keySound K2)
+          keyHit k = case ((pl ^. playNotes) Map.!? k, firstJust (f k) (pl ^. tateren . notes)) of
+            (Just (n : ns), _) -> do
+              whenJust ((pl ^. sounds) !? (n ^. value)) (\s -> playSounds %= (s :))
+            (_, Just n) -> whenJust ((pl ^. sounds) !? (n ^. value)) (\s -> playSounds %= (s :))
+            (_, Nothing) -> return ()
+        whenM (lift $ isKeyPressed KeyLeftShift) (keyHit Sc)
+        whenM (lift $ isKeyPressed KeyZ) (keyHit K1)
+        whenM (lift $ isKeyPressed KeyX) (keyHit K2)
         whenM (lift $ isKeyDown KeyLeftShift) (keys %= Set.insert Sc)
         whenM (lift $ isKeyDown KeyZ) (keys %= Set.insert K1)
         whenM (lift $ isKeyDown KeyX) (keys %= Set.insert K2)
@@ -223,7 +226,7 @@ draw = do
         let y ot = (141 - (141 / lengthInDisplay * Time.toFloat (ot - pl ^. time))) - 82
         forM_ (pl ^. playMeasures) $ \m -> do
           dtexture t.skin (Draw.vec (8 - 60) (y (m ^. time) + 1)) (Draw.rect 9 162 38 1)
-        forM_ (pl ^. playNotes) $ \n -> do
+        forM_ (pl ^. playNotes) $ mapM_ $ \n -> do
           let (x, range) = case n ^. key of
                 Sc -> (9 - 60, Draw.rect 122 141 16 2)
                 K1 -> (26 - 60, Draw.rect 139 141 9 2)

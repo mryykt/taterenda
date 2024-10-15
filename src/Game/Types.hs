@@ -1,6 +1,7 @@
 module Game.Types (module Game.Types) where
 
 import Data.IntMap (IntMap)
+import Data.Map.Strict (Map)
 import Data.Set (Set)
 import Game.Animation (Animation)
 import Game.Config (Config)
@@ -45,12 +46,15 @@ data Play = Play
   { _playTime :: Time
   , _playCurrentBpm :: Float
   , _playTateren :: Tateren
-  , _playPlayNotes :: [Note]
+  , _playPlayNotes :: Map Key [Note]
   , _playPlayMeasures :: [Measure]
   , _playKeys :: Set Key
   , _playPlaySounds :: [Sound]
+  , _playJudgement :: Map Key (Float, JudgementType)
   , _playSounds :: IntMap Sound
   }
+
+data JudgementType = Poor | Bad | Good | Great | PGreat
 
 makeLenses ''Game
 makeLenses ''Title
