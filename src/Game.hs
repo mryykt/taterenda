@@ -16,11 +16,11 @@ import qualified Data.Map as Map
 import Data.Maybe (fromMaybe, listToMaybe, mapMaybe)
 import qualified Data.Set as Set
 import GHC.Float (int2Float)
-import qualified Game.Animation as Animation
 import Game.Config (Config (..), defConfig)
 import Game.Draw ((|+|), (|-|))
 import qualified Game.Draw as Draw
 import qualified Game.Resource as Resource
+import qualified Game.Transition as Transition
 import Game.Types
   ( AppState (..)
   , Game (Game)
@@ -105,12 +105,12 @@ update = do
       zoom (appState . titleState) $
         do
           whenM (((tit ^. cursor > Start) &&) <$> orM [lift $ isKeyPressed KeyUp, lift $ isKeyPressed KeyLeft]) $ do
-            b <- bar %?= Animation.to (Animation.get (tit ^. bar) |-| Draw.vec 0 13) (Draw.vec 0 (-50))
+            b <- bar %?= Transition.to (Transition.get (tit ^. bar) |-| Draw.vec 0 13) (Draw.vec 0 (-50))
             when b $ cursor %= pred
           whenM (((tit ^. cursor < Quit) &&) <$> orM [lift $ isKeyPressed KeyDown, lift $ isKeyPressed KeyRight]) $ do
-            b <- bar %?= Animation.to (Animation.get (tit ^. bar) |+| Draw.vec 0 13) (Draw.vec 0 50)
+            b <- bar %?= Transition.to (Transition.get (tit ^. bar) |+| Draw.vec 0 13) (Draw.vec 0 50)
             when b $ cursor %= succ
-          bar %= Animation.update dt
+          bar %= Transition.update dt
       whenM
         (lift $ isKeyPressed KeyEnter)
         $ case tit ^. cursor of
@@ -185,10 +185,10 @@ update = do
       whenM (lift $ isKeyPressed KeyEscape) (lift (mapM_ (`unloadSound` w) (pl ^. sounds)) >> appState .= initSelect)
 
 initTitle :: AppState
-initTitle = TitleState (Title Start (Animation.init (Draw.vec (-40) 40)))
+initTitle = TitleState (Title Start (Transition.init (Draw.vec (-40) 40)))
 
 initSelect :: AppState
-initSelect = SelectState (Select (Animation.init (Draw.vec 0 0)) (Animation.init (Draw.vec 0 0)))
+initSelect = SelectState (Select (Transition.init (Draw.vec 0 0)) (Transition.init (Draw.vec 0 0)))
 
 (%?=) :: Lens' a b -> (b -> Maybe b) -> StateT a IO Bool
 l %?= f = do
@@ -218,7 +218,7 @@ draw = do
     case state of
       TitleState tit -> do
         dtexture t.title (Draw.vec (-60) (-80)) (Draw.rect 1 1 120 160)
-        dtexture t.font (Animation.get $ tit ^. bar) (Draw.rect 199 31 80 9)
+        dtexture t.font (Transition.get $ tit ^. bar) (Draw.rect 199 31 80 9)
         dtext "START" (Draw.vec 0 40) True
         dtext "HISCORE" (Draw.vec 0 53) True
         dtext "QUIT" (Draw.vec 0 66) True

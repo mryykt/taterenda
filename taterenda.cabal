@@ -26,10 +26,10 @@ source-repository head
 library
   exposed-modules:
       Game
-      Game.Animation
       Game.Config
       Game.Draw
       Game.Resource
+      Game.Transition
       Game.Types
       Music
       Music.Sounds

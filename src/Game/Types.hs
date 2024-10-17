@@ -3,10 +3,10 @@ module Game.Types (module Game.Types) where
 import Data.IntMap (IntMap)
 import Data.Map.Strict (Map)
 import Data.Set (Set)
-import Game.Animation (Animation)
 import Game.Config (Config)
 import Game.Draw (Rectangle, Texture, Vector)
 import Game.Resource (Loader)
+import Game.Transition (Transition)
 import Lens.Micro (Lens', lens)
 import Lens.Micro.TH (makeFields, makeLenses)
 import Music (MusicList)
@@ -34,11 +34,11 @@ data Textures = Textures
 
 data AppState = InitState | TitleState Title | SelectState Select | LoadState Load | PlayState Play
 
-data Title = Title {_cursor :: TitleCusor, _bar :: Animation}
+data Title = Title {_cursor :: TitleCusor, _bar :: Transition}
 
 data TitleCusor = Start | HiScore | Quit deriving (Eq, Ord, Enum)
 
-data Select = Select {_left :: Animation, _right :: Animation}
+data Select = Select {_left :: Transition, _right :: Transition}
 
 data Load = Load {_loadTateren :: Tateren, _loadSounds :: Loader IntMap Sound}
 
