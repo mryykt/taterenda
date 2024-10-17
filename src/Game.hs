@@ -171,7 +171,7 @@ update = do
                     | abs diff <= Time.fromSeconds (pl ^. currentBpm) (1 / 60) -> Animation.pgreat
                     | abs diff <= Time.fromSeconds (pl ^. currentBpm) (4 / 60) -> Animation.great
                     | abs diff <= Time.fromSeconds (pl ^. currentBpm) (10 / 60) -> Animation.good
-                    | diff <= Time.fromSeconds (pl ^. currentBpm) (23 / 60) -> Animation.bad
+                    | -Time.fromSeconds (pl ^. currentBpm) (23 / 60) <= diff && diff < 0 -> Animation.bad
                     | otherwise -> Animation.poor
               judgement .= Just jt
               when (abs diff <= Time.fromSeconds (pl ^. currentBpm) (23 / 60)) $ playNotes %= Map.insert k ns
