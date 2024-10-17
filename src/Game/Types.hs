@@ -50,11 +50,11 @@ data Play = Play
   , _playPlayMeasures :: [Measure]
   , _playKeys :: Set Key
   , _playPlaySounds :: [Sound]
-  , _playJudgement :: Map Key (Float, JudgementType)
+  , _playJudgement :: Maybe (Float, JudgementType)
   , _playSounds :: IntMap Sound
   }
 
-data JudgementType = Poor | Bad | Good | Great | PGreat
+data JudgementType = KPoor | Poor | Bad | Good | Great | PGreat deriving (Eq, Ord, Show)
 
 makeLenses ''Game
 makeLenses ''Title

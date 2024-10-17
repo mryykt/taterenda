@@ -1,6 +1,8 @@
+{-# LANGUAGE MultiWayIf #-}
+
 module Game (mainLoop) where
 
-import Control.Monad.Extra (forM_, notM, orM, when, whenJust, whenJustM, whenM, whileM)
+import Control.Monad.Extra (forM_, notM, orM, unless, when, whenJust, whenJustM, whenM, whileM)
 import Control.Monad.State.Strict
   ( StateT
   , evalStateT
@@ -22,7 +24,7 @@ import qualified Game.Resource as Resource
 import Game.Types
   ( AppState (..)
   , Game (Game)
-  , HasPlaySounds (playSounds)
+  , JudgementType (..)
   , Load (..)
   , Play (Play)
   , Select (Select)
@@ -35,10 +37,12 @@ import Game.Types
   , currentBpm
   , cursor
   , drawer
+  , judgement
   , keys
   , musicList
   , playMeasures
   , playNotes
+  , playSounds
   , playState
   , sounds
   , tateren
@@ -46,7 +50,7 @@ import Game.Types
   , titleState
   , window
   )
-import Lens.Micro (Lens', (^.))
+import Lens.Micro (Lens', (&), (+~), (^.), _1)
 import Lens.Micro.Mtl (use, zoom, (%=), (.=))
 import Music (bpm)
 import qualified Music
@@ -61,7 +65,7 @@ import Tateren.Types (Key (..), bgms, bpmChanges, key, measures, notes, value)
 import Text.Printf (printf)
 import Time (HasTime (time))
 import qualified Time
-import Prelude hiding (init)
+import Prelude hiding (init, unzip)
 
 mainLoop :: IO ()
 mainLoop = init >>= evalStateT (whileM (notM $ update >> draw >> shouldClose) >> teardown)
@@ -135,7 +139,7 @@ update = do
         (appState .= initTitle)
     LoadState ld -> do
       (_, music) <- Music.current <$> use musicList
-      whenJustM (lift $ Resource.get (ld ^. sounds)) (\s -> appState .= PlayState (Play (Time.fromInt 0) music.bpm (ld ^. tateren) (Map.fromList [(Sc, []), (K1, []), (K2, [])]) [] Set.empty [] Map.empty s))
+      whenJustM (lift $ Resource.get (ld ^. sounds)) (\s -> appState .= PlayState (Play (Time.fromInt 0) music.bpm (ld ^. tateren) (Map.fromList [(Sc, []), (K1, []), (K2, [])]) [] Set.empty [] Nothing s))
     PlayState pl -> do
       zoom (appState . playState) $ do
         keys .= Set.empty
@@ -147,14 +151,28 @@ update = do
         measures1 <- (tateren . measures) >%= Time.get (t + lengthInDisplay)
         bpmChanges1 <- (tateren . bpmChanges) >%= Time.get t
         let insertNote n = Map.update (Just . (++ [n])) (n ^. key)
-        playNotes %= (flip (foldl' (flip insertNote)) notes1 . (dropWhile ((t >) . (^. time)) <$>))
+        playNotes %= flip (foldl' (flip insertNote)) notes1
         playMeasures %= ((++ measures1) . dropWhile ((t >) . (^. time)))
         currentBpm %= (\b -> maybe b (int2Float . (^. value)) $ listToMaybe bpmChanges1)
+        judgement %= ((\j@(elapsed, _) -> if elapsed > 1 then Nothing else Just (j & _1 +~ dt)) =<<)
+        poors <- playNotes >%= (unzip . fmap (Time.get (t - Time.fromSeconds (pl ^. currentBpm) (23 / 60))))
+        unless (all null poors) (judgement .= Just (0, Poor))
         let
           f k x = if x ^. key == k then Just x else Nothing
           keyHit k = case ((pl ^. playNotes) Map.!? k, firstJust (f k) (pl ^. tateren . notes)) of
             (Just (n : ns), _) -> do
               whenJust ((pl ^. sounds) !? (n ^. value)) (\s -> playSounds %= (s :))
+              let
+                diff = n ^. time - t
+                jt =
+                  if
+                    | abs diff <= Time.fromSeconds (pl ^. currentBpm) (1 / 60) -> PGreat
+                    | abs diff <= Time.fromSeconds (pl ^. currentBpm) (4 / 60) -> Great
+                    | abs diff <= Time.fromSeconds (pl ^. currentBpm) (10 / 60) -> Good
+                    | diff <= Time.fromSeconds (pl ^. currentBpm) (23 / 60) -> Bad
+                    | otherwise -> KPoor
+              judgement .= Just (0, jt)
+              when (jt > Poor) $ playNotes %= Map.insert k ns
             (_, Just n) -> whenJust ((pl ^. sounds) !? (n ^. value)) (\s -> playSounds %= (s :))
             (_, Nothing) -> return ()
         whenM (lift $ isKeyPressed KeyLeftShift) (keyHit Sc)
@@ -185,6 +203,9 @@ l >%= f = do
   x <- use l
   let (y1, y2) = f x
   l .= y2 >> return y1
+
+unzip :: (Functor f) => f (a, b) -> (f a, f b)
+unzip xs = (fst <$> xs, snd <$> xs)
 
 draw :: StateT Game IO ()
 draw = do
@@ -226,12 +247,18 @@ draw = do
         let y ot = (141 - (141 / lengthInDisplay * Time.toFloat (ot - pl ^. time))) - 82
         forM_ (pl ^. playMeasures) $ \m -> do
           dtexture t.skin (Draw.vec (8 - 60) (y (m ^. time) + 1)) (Draw.rect 9 162 38 1)
-        forM_ (pl ^. playNotes) $ mapM_ $ \n -> do
-          let (x, range) = case n ^. key of
-                Sc -> (9 - 60, Draw.rect 122 141 16 2)
-                K1 -> (26 - 60, Draw.rect 139 141 9 2)
-                K2 -> (36 - 60, Draw.rect 139 141 9 2)
-          dtexture t.skin (Draw.vec x (y (n ^. time))) range
+        forM_ (pl ^. playNotes) $
+          mapM_
+            ( \n -> do
+                let (x, range) = case n ^. key of
+                      Sc -> (9 - 60, Draw.rect 122 141 16 2)
+                      K1 -> (26 - 60, Draw.rect 139 141 9 2)
+                      K2 -> (36 - 60, Draw.rect 139 141 9 2)
+                dtexture t.skin (Draw.vec x (y (n ^. time))) range
+            )
+            . dropWhile (((pl ^. time) >) . (^. time))
+        forM_ (pl ^. judgement) $ \(_, jt) ->
+          dtext (show jt) (Draw.vec 0 0) True
         mapM_ playSound (pl ^. playSounds)
       _ -> return ()
 

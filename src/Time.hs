@@ -1,4 +1,4 @@
-module Time (Time, update, fromInt, toFloat, get, HasTime (time)) where
+module Time (Time, update, fromInt, toFloat, fromSeconds, get, HasTime (time)) where
 
 import GHC.Float (int2Float)
 import Lens.Micro ((^.))
@@ -24,15 +24,16 @@ Time 192.0
 Time 192.0
 -}
 update :: Float -> Float -> Time -> Time
-update dt bpm (Time t) = Time (t + offset)
-  where
-    offset = dt * bpm / 60 * (0xc0 / 4)
+update dt bpm t = t + fromSeconds bpm dt
 
 fromInt :: Int -> Time
 fromInt = Time . int2Float
 
 toFloat :: Time -> Float
 toFloat (Time t) = t
+
+fromSeconds :: Float -> Float -> Time
+fromSeconds bpm sec = Time (sec * bpm / 60 * (0xc0 / 4))
 
 newtype Dummy = Dummy {_dummyTime :: Time}
 
