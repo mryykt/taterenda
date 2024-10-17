@@ -3,6 +3,7 @@ module Game.Types (module Game.Types) where
 import Data.IntMap (IntMap)
 import Data.Map.Strict (Map)
 import Data.Set (Set)
+import Game.Animation (Animation)
 import Game.Config (Config)
 import Game.Draw (Rectangle, Texture, Vector)
 import Game.Resource (Loader)
@@ -50,7 +51,7 @@ data Play = Play
   , _playPlayMeasures :: [Measure]
   , _playKeys :: Set Key
   , _playPlaySounds :: [Sound]
-  , _playJudgement :: Maybe (Float, JudgementType)
+  , _playJudgement :: Maybe Animation
   , _playSounds :: IntMap Sound
   }
 

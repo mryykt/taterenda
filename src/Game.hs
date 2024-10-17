@@ -16,6 +16,7 @@ import qualified Data.Map as Map
 import Data.Maybe (fromMaybe, listToMaybe, mapMaybe)
 import qualified Data.Set as Set
 import GHC.Float (int2Float)
+import qualified Game.Animation as Animation
 import Game.Config (Config (..), defConfig)
 import Game.Draw ((|+|), (|-|))
 import qualified Game.Draw as Draw
@@ -24,7 +25,6 @@ import qualified Game.Transition as Transition
 import Game.Types
   ( AppState (..)
   , Game (Game)
-  , JudgementType (..)
   , Load (..)
   , Play (Play)
   , Select (Select)
@@ -50,7 +50,7 @@ import Game.Types
   , titleState
   , window
   )
-import Lens.Micro (Lens', (&), (+~), (^.), _1)
+import Lens.Micro (Lens', (^.))
 import Lens.Micro.Mtl (use, zoom, (%=), (.=))
 import Music (bpm)
 import qualified Music
@@ -154,9 +154,9 @@ update = do
         playNotes %= flip (foldl' (flip insertNote)) notes1
         playMeasures %= ((++ measures1) . dropWhile ((t >) . (^. time)))
         currentBpm %= (\b -> maybe b (int2Float . (^. value)) $ listToMaybe bpmChanges1)
-        judgement %= ((\j@(elapsed, _) -> if elapsed > 1 then Nothing else Just (j & _1 +~ dt)) =<<)
+        judgement %= (Animation.update dt =<<)
         poors <- playNotes >%= (unzip . fmap (Time.get (t - Time.fromSeconds (pl ^. currentBpm) (23 / 60))))
-        unless (all null poors) (judgement .= Just (0, Poor))
+        unless (all null poors) (judgement .= Just Animation.poor)
         let
           f k x = if x ^. key == k then Just x else Nothing
           keyHit k = case ((pl ^. playNotes) Map.!? k, firstJust (f k) (pl ^. tateren . notes)) of
@@ -166,13 +166,13 @@ update = do
                 diff = n ^. time - t
                 jt =
                   if
-                    | abs diff <= Time.fromSeconds (pl ^. currentBpm) (1 / 60) -> PGreat
-                    | abs diff <= Time.fromSeconds (pl ^. currentBpm) (4 / 60) -> Great
-                    | abs diff <= Time.fromSeconds (pl ^. currentBpm) (10 / 60) -> Good
-                    | diff <= Time.fromSeconds (pl ^. currentBpm) (23 / 60) -> Bad
-                    | otherwise -> KPoor
-              judgement .= Just (0, jt)
-              when (jt > Poor) $ playNotes %= Map.insert k ns
+                    | abs diff <= Time.fromSeconds (pl ^. currentBpm) (1 / 60) -> Animation.pgreat
+                    | abs diff <= Time.fromSeconds (pl ^. currentBpm) (4 / 60) -> Animation.great
+                    | abs diff <= Time.fromSeconds (pl ^. currentBpm) (10 / 60) -> Animation.good
+                    | diff <= Time.fromSeconds (pl ^. currentBpm) (23 / 60) -> Animation.bad
+                    | otherwise -> Animation.poor
+              judgement .= Just jt
+              when (abs diff <= Time.fromSeconds (pl ^. currentBpm) (23 / 60)) $ playNotes %= Map.insert k ns
             (_, Just n) -> whenJust ((pl ^. sounds) !? (n ^. value)) (\s -> playSounds %= (s :))
             (_, Nothing) -> return ()
         whenM (lift $ isKeyPressed KeyLeftShift) (keyHit Sc)
@@ -257,8 +257,7 @@ draw = do
                 dtexture t.skin (Draw.vec x (y (n ^. time))) range
             )
             . dropWhile (((pl ^. time) >) . (^. time))
-        forM_ (pl ^. judgement) $ \(_, jt) ->
-          dtext (show jt) (Draw.vec 0 0) True
+        whenJust (pl ^. judgement) $ Animation.draw dtexture t.skin (Draw.vec (-52) 20)
         mapM_ playSound (pl ^. playSounds)
       _ -> return ()
 
