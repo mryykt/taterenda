@@ -157,17 +157,21 @@ update = do
               whenJust ((pl ^. sounds) !? (n ^. value)) (\s -> playSounds %= (s :))
               let
                 diff = n ^. time - t
-                jt =
-                  if
-                    | abs diff <= Time.fromSeconds (pl ^. currentBpm) (1 / 60) -> Animation.pgreat
-                    | abs diff <= Time.fromSeconds (pl ^. currentBpm) (4 / 60) -> Animation.great
-                    | abs diff <= Time.fromSeconds (pl ^. currentBpm) (10 / 60) -> Animation.good
-                    | -Time.fromSeconds (pl ^. currentBpm) (23 / 60) <= diff && diff < 0 -> Animation.bad
-                    | otherwise -> Animation.poor
-              judgement .= Just jt
-              when (abs diff <= Time.fromSeconds (pl ^. currentBpm) (23 / 60)) $ do
-                bombs %= Map.insert k Animation.bomb
-                playNotes %= Map.insert k ns
+              if
+                | abs diff <= Time.fromSeconds (pl ^. currentBpm) (10 / 60) -> do
+                    jt <-
+                      if
+                        | abs diff <= Time.fromSeconds (pl ^. currentBpm) (1 / 60) -> return Animation.pgreat
+                        | abs diff <= Time.fromSeconds (pl ^. currentBpm) (4 / 60) -> return Animation.great
+                        | otherwise -> return Animation.good
+                    judgement .= Just jt
+                    bombs %= Map.insert k Animation.bomb
+                    playNotes %= Map.insert k ns
+                | abs diff <= Time.fromSeconds (pl ^. currentBpm) (23 / 60) -> do
+                    judgement .= Just Animation.bad
+                    playNotes %= Map.insert k ns
+                | diff >= Time.fromSeconds (pl ^. currentBpm) 1 -> return ()
+                | otherwise -> judgement .= Just Animation.poor
             (_, Just n) -> whenJust ((pl ^. sounds) !? (n ^. value)) (\s -> playSounds %= (s :))
             (_, Nothing) -> return ()
         whenM (lift $ isKeyPressed KeyLeftShift) (keyHit Sc)
