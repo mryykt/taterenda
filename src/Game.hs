@@ -12,7 +12,7 @@ import Data.Aeson.Micro (decodeStrict, encodeStrict)
 import qualified Data.ByteString as BS
 import Data.IntMap ((!?))
 import Data.List.Extra (firstJust, foldl')
-import qualified Data.Map as Map
+import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe, listToMaybe, mapMaybe)
 import qualified Data.Set as Set
 import GHC.Float (int2Float)
@@ -147,18 +147,8 @@ update = do
         keys .= Set.empty
         playSounds .= []
         t <- use time
-        time %= Time.update dt (pl ^. currentBpm)
-        sounds1 <- (tateren . bgms) >%= Time.get t
-        notes1 <- (tateren . notes) >%= Time.get (t + lengthInDisplay)
-        measures1 <- (tateren . measures) >%= Time.get (t + lengthInDisplay)
-        bpmChanges1 <- (tateren . bpmChanges) >%= Time.get t
-        let insertNote n = Map.update (Just . (++ [n])) (n ^. key)
-        playNotes %= flip (foldl' (flip insertNote)) notes1
-        playMeasures %= ((++ measures1) . dropWhile ((t >) . (^. time)))
-        currentBpm %= (\b -> maybe b (int2Float . (^. value)) $ listToMaybe bpmChanges1)
-        judgement %= (Animation.update dt =<<)
-        poors <- playNotes >%= (unzip . fmap (Time.get (t - Time.fromSeconds (pl ^. currentBpm) (23 / 60))))
-        unless (all null poors) (judgement .= Just Animation.poor)
+
+        -- keyboard control
         let
           f k x = if x ^. key == k then Just x else Nothing
           keyHit k = case ((pl ^. playNotes) Map.!? k, firstJust (f k) (pl ^. tateren . notes)) of
@@ -183,6 +173,19 @@ update = do
         whenM (lift $ isKeyDown KeyLeftShift) (keys %= Set.insert Sc)
         whenM (lift $ isKeyDown KeyZ) (keys %= Set.insert K1)
         whenM (lift $ isKeyDown KeyX) (keys %= Set.insert K2)
+        --  update
+        time %= Time.update dt (pl ^. currentBpm)
+        sounds1 <- (tateren . bgms) >%= Time.get t
+        notes1 <- (tateren . notes) >%= Time.get (t + lengthInDisplay)
+        measures1 <- (tateren . measures) >%= Time.get (t + lengthInDisplay)
+        bpmChanges1 <- (tateren . bpmChanges) >%= Time.get t
+        let insertNote ns n = Map.update (Just . (++ [n])) (n ^. key) ns
+        playNotes %= flip (foldl' insertNote) notes1
+        playMeasures %= ((++ measures1) . dropWhile ((t >) . (^. time)))
+        currentBpm %= (\b -> maybe b (int2Float . (^. value)) $ listToMaybe bpmChanges1)
+        judgement %= (Animation.update dt =<<)
+        poors <- playNotes >%= (unzip . fmap (Time.get (t - Time.fromSeconds (pl ^. currentBpm) (23 / 60))))
+        unless (all null poors) (judgement .= Just Animation.poor)
         playSounds %= (mapMaybe (((pl ^. sounds) !?) . (^. value)) sounds1 ++)
       whenM (lift $ isKeyPressed KeyEscape) (lift (mapM_ (`unloadSound` w) (pl ^. sounds)) >> appState .= initSelect)
 
