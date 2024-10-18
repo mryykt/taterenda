@@ -1,4 +1,4 @@
-module Game.Animation (Animation, init, update, draw, pgreat, great, good, bad, poor) where
+module Game.Animation (Animation, init, update, draw, pgreat, great, good, bad, poor, bomb) where
 
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.List.NonEmpty as NE
@@ -29,3 +29,6 @@ great = init 1 0 [Draw.rect 149 28 40 8]
 good = init 1 0 [Draw.rect 149 37 40 8]
 bad = init 1 0 [Draw.rect 149 46 40 8]
 poor = init 1 0 [Draw.rect 149 55 40 8]
+
+bomb :: Animation
+bomb = init 0.03 0 $ Draw.rect 149 64 8 7 : map (\i -> Draw.rect 149 (72 + int2Float i * 9) 8 8) [0 .. 3]

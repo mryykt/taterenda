@@ -52,6 +52,7 @@ data Play = Play
   , _playKeys :: Set Key
   , _playPlaySounds :: [Sound]
   , _playJudgement :: Maybe Animation
+  , _playBombs :: Map Key Animation
   , _playSounds :: IntMap Sound
   }
 

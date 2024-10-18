@@ -33,6 +33,7 @@ import Game.Types
   , TitleCusor (..)
   , appState
   , bar
+  , bombs
   , close
   , currentBpm
   , cursor
@@ -141,7 +142,7 @@ update = do
       (_, music) <- Music.current <$> use musicList
       whenJustM
         (lift $ Resource.get (ld ^. sounds))
-        (\s -> appState .= PlayState (Play (Time.fromInt 0) music.bpm (ld ^. tateren) (Map.fromList [(Sc, []), (K1, []), (K2, [])]) [] Set.empty [] Nothing s))
+        (\s -> appState .= PlayState (Play (Time.fromInt 0) music.bpm (ld ^. tateren) (Map.fromList [(Sc, []), (K1, []), (K2, [])]) [] Set.empty [] Nothing Map.empty s))
     PlayState pl -> do
       zoom (appState . playState) $ do
         keys .= Set.empty
@@ -164,7 +165,9 @@ update = do
                     | -Time.fromSeconds (pl ^. currentBpm) (23 / 60) <= diff && diff < 0 -> Animation.bad
                     | otherwise -> Animation.poor
               judgement .= Just jt
-              when (abs diff <= Time.fromSeconds (pl ^. currentBpm) (23 / 60)) $ playNotes %= Map.insert k ns
+              when (abs diff <= Time.fromSeconds (pl ^. currentBpm) (23 / 60)) $ do
+                bombs %= Map.insert k Animation.bomb
+                playNotes %= Map.insert k ns
             (_, Just n) -> whenJust ((pl ^. sounds) !? (n ^. value)) (\s -> playSounds %= (s :))
             (_, Nothing) -> return ()
         whenM (lift $ isKeyPressed KeyLeftShift) (keyHit Sc)
@@ -184,6 +187,7 @@ update = do
         playMeasures %= ((++ measures1) . dropWhile ((t >) . (^. time)))
         currentBpm %= (\b -> maybe b (int2Float . (^. value)) $ listToMaybe bpmChanges1)
         judgement %= (Animation.update dt =<<)
+        bombs %= (\b -> foldl' (flip (Map.update (Animation.update dt))) b [Sc, K1, K2])
         poors <- playNotes >%= (unzip . fmap (Time.get (t - Time.fromSeconds (pl ^. currentBpm) (23 / 60))))
         unless (all null poors) (judgement .= Just Animation.poor)
         playSounds %= (mapMaybe (((pl ^. sounds) !?) . (^. value)) sounds1 ++)
@@ -263,6 +267,10 @@ draw = do
             )
             . dropWhile (((pl ^. time) >) . (^. time))
         whenJust (pl ^. judgement) $ Animation.draw dtexture t.skin (Draw.vec (-52) 20)
+        let drawBomb k x = whenJust ((pl ^. bombs) Map.!? k) $ Animation.draw dtexture t.skin (Draw.vec x 56)
+        drawBomb Sc (13 - 60)
+        drawBomb K1 (27 - 60)
+        drawBomb K2 (37 - 60)
         mapM_ playSound (pl ^. playSounds)
       _ -> return ()
 
