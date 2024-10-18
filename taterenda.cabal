@@ -45,6 +45,7 @@ library
   hs-source-dirs:
       src
   default-extensions:
+      StrictData
       TemplateHaskell
       FlexibleContexts
       FunctionalDependencies
@@ -79,6 +80,7 @@ executable taterenda-exe
   hs-source-dirs:
       app
   default-extensions:
+      StrictData
       TemplateHaskell
       FlexibleContexts
       FunctionalDependencies
@@ -101,6 +103,7 @@ test-suite taterenda-test
   hs-source-dirs:
       test
   default-extensions:
+      StrictData
       TemplateHaskell
       FlexibleContexts
       FunctionalDependencies
