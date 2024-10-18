@@ -20,7 +20,7 @@ data Game = Game
   { _window :: WindowResources
   , _config :: Config
   , _close :: Bool
-  , _drawer :: (Texture -> Vector -> Rectangle -> IO (), String -> Vector -> Bool -> IO ())
+  , _drawer :: (Texture -> Vector -> Rectangle -> IO (), String -> Vector -> Bool -> Bool -> IO ())
   , _musicList :: MusicList
   , _textures :: Textures
   , _appState :: AppState
@@ -53,15 +53,17 @@ data Play = Play
   , _playPlaySounds :: [Sound]
   , _playJudgement :: Maybe Animation
   , _playBombs :: Map Key Animation
+  , _playJudgementCount :: JudgementCount
   , _playSounds :: IntMap Sound
   }
 
-data JudgementType = KPoor | Poor | Bad | Good | Great | PGreat deriving (Eq, Ord, Show)
+data JudgementCount = JudgementCount {_great :: Int, _good :: Int, _bad :: Int, _poor :: Int}
 
 makeLenses ''Game
 makeLenses ''Title
 makeFields ''Load
 makeFields ''Play
+makeLenses ''JudgementCount
 
 titleState :: Lens' AppState Title
 titleState = lens getter setter

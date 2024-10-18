@@ -25,6 +25,8 @@ import qualified Game.Transition as Transition
 import Game.Types
   ( AppState (..)
   , Game (Game)
+  , HasJudgementCount (judgementCount)
+  , JudgementCount (JudgementCount)
   , Load (..)
   , Play (Play)
   , Select (Select)
@@ -32,12 +34,15 @@ import Game.Types
   , Title (Title)
   , TitleCusor (..)
   , appState
+  , bad
   , bar
   , bombs
   , close
   , currentBpm
   , cursor
   , drawer
+  , good
+  , great
   , judgement
   , keys
   , musicList
@@ -45,6 +50,7 @@ import Game.Types
   , playNotes
   , playSounds
   , playState
+  , poor
   , sounds
   , tateren
   , textures
@@ -52,13 +58,13 @@ import Game.Types
   , window
   )
 import Lens.Micro (Lens', (^.))
-import Lens.Micro.Mtl (use, zoom, (%=), (.=))
+import Lens.Micro.Mtl (use, zoom, (%=), (+=), (.=))
 import Music (bpm)
 import qualified Music
 import Raylib.Core (clearBackground, closeWindow, fileExists, getFrameTime, getScreenHeight, getScreenWidth, initWindow, isKeyDown, isKeyPressed, setTargetFPS, setTraceLogLevel, toggleBorderlessWindowed)
 import Raylib.Core.Audio (initAudioDevice, playSound, unloadSound)
-import Raylib.Types (KeyboardKey (KeyDown, KeyEnter, KeyEscape, KeyLeft, KeyLeftShift, KeyRight, KeyUp, KeyX, KeyZ), TraceLogLevel (LogNone))
-import Raylib.Util (drawing)
+import Raylib.Types (BlendMode (BlendAdditive), KeyboardKey (KeyDown, KeyEnter, KeyEscape, KeyLeft, KeyLeftShift, KeyRight, KeyUp, KeyX, KeyZ), TraceLogLevel (LogNone))
+import Raylib.Util (blendMode, drawing)
 import Raylib.Util.Colors (black)
 import System.FilePath ((</>))
 import qualified Tateren
@@ -142,7 +148,23 @@ update = do
       (_, music) <- Music.current <$> use musicList
       whenJustM
         (lift $ Resource.get (ld ^. sounds))
-        (\s -> appState .= PlayState (Play (Time.fromInt 0) music.bpm (ld ^. tateren) (Map.fromList [(Sc, []), (K1, []), (K2, [])]) [] Set.empty [] Nothing Map.empty s))
+        ( \s ->
+            appState
+              .= PlayState
+                ( Play
+                    (Time.fromInt 0)
+                    music.bpm
+                    (ld ^. tateren)
+                    (Map.fromList [(Sc, []), (K1, []), (K2, [])])
+                    []
+                    Set.empty
+                    []
+                    Nothing
+                    Map.empty
+                    (JudgementCount 0 0 0 0)
+                    s
+                )
+        )
     PlayState pl -> do
       zoom (appState . playState) $ do
         keys .= Set.empty
@@ -161,17 +183,18 @@ update = do
                 | abs diff <= Time.fromSeconds (pl ^. currentBpm) (10 / 60) -> do
                     jt <-
                       if
-                        | abs diff <= Time.fromSeconds (pl ^. currentBpm) (1 / 60) -> return Animation.pgreat
-                        | abs diff <= Time.fromSeconds (pl ^. currentBpm) (4 / 60) -> return Animation.great
-                        | otherwise -> return Animation.good
+                        | abs diff <= Time.fromSeconds (pl ^. currentBpm) (1 / 60) -> judgementCount . great += 1 >> return Animation.pgreat
+                        | abs diff <= Time.fromSeconds (pl ^. currentBpm) (4 / 60) -> judgementCount . great += 1 >> return Animation.great
+                        | otherwise -> judgementCount . good += 1 >> return Animation.good
                     judgement .= Just jt
                     bombs %= Map.insert k Animation.bomb
                     playNotes %= Map.insert k ns
                 | abs diff <= Time.fromSeconds (pl ^. currentBpm) (23 / 60) -> do
                     judgement .= Just Animation.bad
                     playNotes %= Map.insert k ns
+                    judgementCount . bad += 1
                 | diff >= Time.fromSeconds (pl ^. currentBpm) 1 -> return ()
-                | otherwise -> judgement .= Just Animation.poor
+                | otherwise -> judgementCount . poor += 1 >> judgement .= Just Animation.poor
             (_, Just n) -> whenJust ((pl ^. sounds) !? (n ^. value)) (\s -> playSounds %= (s :))
             (_, Nothing) -> return ()
         whenM (lift $ isKeyPressed KeyLeftShift) (keyHit Sc)
@@ -193,7 +216,7 @@ update = do
         judgement %= (Animation.update dt =<<)
         bombs %= (\b -> foldl' (flip (Map.update (Animation.update dt))) b [Sc, K1, K2])
         poors <- playNotes >%= (unzip . fmap (Time.get (t - Time.fromSeconds (pl ^. currentBpm) (23 / 60))))
-        unless (all null poors) (judgement .= Just Animation.poor)
+        unless (all null poors) (judgementCount . poor += 1 >> judgement .= Just Animation.poor)
         playSounds %= (mapMaybe (((pl ^. sounds) !?) . (^. value)) sounds1 ++)
       whenM (lift $ isKeyPressed KeyEscape) (lift (mapM_ (`unloadSound` w) (pl ^. sounds)) >> appState .= initSelect)
 
@@ -232,23 +255,23 @@ draw = do
       TitleState tit -> do
         dtexture t.title (Draw.vec (-60) (-80)) (Draw.rect 1 1 120 160)
         dtexture t.font (Transition.get $ tit ^. bar) (Draw.rect 199 31 80 9)
-        dtext "START" (Draw.vec 0 40) True
-        dtext "HISCORE" (Draw.vec 0 53) True
-        dtext "QUIT" (Draw.vec 0 66) True
+        dtext "START" (Draw.vec 0 40) True False
+        dtext "HISCORE" (Draw.vec 0 53) True False
+        dtext "QUIT" (Draw.vec 0 66) True False
       SelectState _ -> do
         let (index, music) = Music.current ml
         dtexture t.select (Draw.vec (-60) (-80)) (Draw.rect (1 + 121 * int2Float (index `mod` 8)) (1 + 223 * int2Float (index `div` 8)) 120 160)
         dtexture t.select (Draw.vec (-40) (-30)) (Draw.rect (1 + 81 * int2Float (index `mod` 8)) (162 + 223 * int2Float (index `div` 8)) 80 30)
         when (index > 0) $ dtexture t.select (Draw.vec (-60) (-20)) (Draw.rect 649 162 13 11)
         when (index < 15) $ dtexture t.select (Draw.vec 47 (-20)) (Draw.rect 663 162 13 11)
-        dtext (printf "%02d/16" (index + 1)) (Draw.vec 0 (-75)) True
-        dtext (printf "HiScore:XXXX") (Draw.vec 0 (-60)) True
-        dtext (maybe "????" (`replicate` '*') music.difficulty) (Draw.vec 0 (-45)) True
-        dtext "-TITLE--------" (Draw.vec 0 5) True
-        dtext music.name (Draw.vec (-56) 15) False
-        dtext "-ARTIST-------" (Draw.vec 0 35) True
-        dtext music.artist (Draw.vec (-56) 45) False
-        dtext (printf "BPM:%d" (round music.bpm :: Int)) (Draw.vec (-56) 65) False
+        dtext (printf "%02d/16" (index + 1)) (Draw.vec 0 (-75)) True False
+        dtext (printf "HiScore:XXXX") (Draw.vec 0 (-60)) True False
+        dtext (maybe "????" (`replicate` '*') music.difficulty) (Draw.vec 0 (-45)) True False
+        dtext "-TITLE--------" (Draw.vec 0 5) True False
+        dtext music.name (Draw.vec (-56) 15) False False
+        dtext "-ARTIST-------" (Draw.vec 0 35) True False
+        dtext music.artist (Draw.vec (-56) 45) False False
+        dtext (printf "BPM:%d" (round music.bpm :: Int)) (Draw.vec (-56) 65) False False
       PlayState pl -> do
         dtexture t.skin (Draw.vec (-60) (-80)) (Draw.rect 1 1 120 160)
         forM_ (pl ^. keys) $ \k -> do
@@ -275,6 +298,11 @@ draw = do
         drawBomb Sc (13 - 60)
         drawBomb K1 (27 - 60)
         drawBomb K2 (37 - 60)
+        blendMode
+          BlendAdditive
+          ( forM_ [(pl ^. judgementCount . great, -57), (pl ^. judgementCount . good, -33), (pl ^. judgementCount . bad, -9), (pl ^. judgementCount . poor, 15)] $ \(c, y') -> do
+              dtext (printf "%4d" c) (Draw.vec 15 y') False True
+          )
         mapM_ playSound (pl ^. playSounds)
       _ -> return ()
 

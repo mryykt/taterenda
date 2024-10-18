@@ -38,9 +38,10 @@ texture config t (Raylib.Vector2 x y) (Raylib.Rectangle srcx srcy w h) =
     dst = Raylib.Rectangle (config.actualWidth / 2 + scale * x) (config.actualHeight / 2 + scale * y) (scale * w) (scale * h)
     scale = if config.actualWidth / config.actualHeight < 120 / 160 then config.actualWidth / 120 else config.actualHeight / 160
 
-text :: (Texture -> Vector -> Rectangle -> IO ()) -> Texture -> String -> Vector -> Bool -> IO ()
-text drawer font str (Raylib.Vector2 x y) centering = mapM_ (\(offsety, line) -> mapM_ (f offsety) $ zip [0 ..] line) $ zip [0 ..] $ splitOn "\n" str
+text :: (Texture -> Vector -> Rectangle -> IO ()) -> Texture -> String -> Vector -> Bool -> Bool -> IO ()
+text drawer font str (Raylib.Vector2 x y) centering small = mapM_ (\(offsety, line) -> mapM_ (f offsety) $ zip [0 ..] line) $ zip [0 ..] $ splitOn "\n" str
   where
-    f offsety (offsetx, char) = drawer font (vec (x + 8 * offsetx - if centering then int2Float (length str * 8) / 2 else 0) (y + 10 * offsety)) (rect (1 + 9 * int2Float (c `mod` 32)) (1 + 10 * int2Float (c `div` 32)) 8 9)
+    f offsety (offsetx, char) = drawer font (vec (x + (w + if small then 1 else 0) * offsetx - if centering then int2Float (length str) * w / 2 else 0) (y + (h + 1) * offsety)) (rect (1 + (w + 1) * int2Float (c `mod` 32)) (startY + (h + 1) * int2Float (c `div` 32)) w h)
       where
+        (w, h, startY) = if small then (5, 7, 31) else (8, 9, 1)
         c = ord char - 0x20
