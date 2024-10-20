@@ -1,8 +1,13 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Game.Config (module Game.Config) where
+module Game.Config (Config (..), read, write) where
 
+import Control.Monad.Extra (ifM)
 import Data.Aeson.Micro
+import qualified Data.ByteString as BS
+import Data.Maybe (fromMaybe)
+import Raylib.Core (fileExists)
+import Prelude hiding (read)
 
 data Config = Config
   { width :: Int
@@ -19,8 +24,18 @@ instance FromJSON Config where
 instance ToJSON Config where
   toJSON config = object ["width" .= config.width, "height" .= config.height, "fullscreen" .= config.fullScreen]
 
-defConfig :: Config
-defConfig =
+write :: Config -> IO ()
+write = BS.writeFile "config.json" . encodeStrict
+
+read :: IO Config
+read =
+  ifM
+    (fileExists "config.json")
+    (fromMaybe (error "config file is invalid") . decodeStrict <$> BS.readFile "config.json")
+    (write def >> return def)
+
+def :: Config
+def =
   Config
     { width = 640
     , height = 480

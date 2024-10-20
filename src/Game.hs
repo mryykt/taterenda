@@ -8,16 +8,15 @@ import Control.Monad.State.Strict
   , evalStateT
   , lift
   )
-import Data.Aeson.Micro (decodeStrict, encodeStrict)
-import qualified Data.ByteString as BS
 import Data.IntMap ((!?))
 import Data.List.Extra (firstJust, foldl')
 import qualified Data.Map.Strict as Map
-import Data.Maybe (fromMaybe, listToMaybe, mapMaybe)
+import Data.Maybe (listToMaybe, mapMaybe)
 import qualified Data.Set as Set
 import GHC.Float (int2Float)
 import qualified Game.Animation as Animation
-import Game.Config (Config (..), defConfig)
+import Game.Config (Config (..))
+import qualified Game.Config as Config
 import Game.Draw ((|+|), (|-|))
 import qualified Game.Draw as Draw
 import qualified Game.Resource as Resource
@@ -62,7 +61,7 @@ import Lens.Micro (Lens', (^.))
 import Lens.Micro.Mtl (use, zoom, (%=), (+=), (.=))
 import Music (bpm)
 import qualified Music
-import Raylib.Core (clearBackground, closeWindow, fileExists, getFrameTime, getScreenHeight, getScreenWidth, initWindow, isKeyDown, isKeyPressed, setTargetFPS, setTraceLogLevel, toggleBorderlessWindowed)
+import Raylib.Core (clearBackground, closeWindow, getFrameTime, getScreenHeight, getScreenWidth, initWindow, isKeyDown, isKeyPressed, setTargetFPS, setTraceLogLevel, toggleBorderlessWindowed)
 import Raylib.Core.Audio (initAudioDevice, playSound, unloadSound)
 import Raylib.Types (BlendMode (BlendAdditive), KeyboardKey (KeyDown, KeyEnter, KeyEscape, KeyLeft, KeyLeftShift, KeyRight, KeyUp, KeyX, KeyZ), TraceLogLevel (LogNone))
 import Raylib.Util (blendMode, drawing)
@@ -80,11 +79,7 @@ mainLoop = init >>= evalStateT (whileM (notM $ update >> draw >> shouldClose) >>
 
 init :: IO Game
 init = do
-  isConfigExists <- fileExists "config.json"
-  config <-
-    if isConfigExists
-      then fromMaybe (error "config file is invalid") . decodeStrict <$> BS.readFile "config.json"
-      else BS.writeFile "config.json" (encodeStrict defConfig) >> return defConfig
+  config <- Config.read
   w <- initWindow config.width config.height "taterenda"
   when config.fullScreen toggleBorderlessWindowed
   ts <-
