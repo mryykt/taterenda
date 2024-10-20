@@ -10,10 +10,10 @@ import Control.Monad.State.Strict
   )
 import Data.Aeson.Micro (decodeStrict, encodeStrict)
 import qualified Data.ByteString as BS
-import Data.IntMap ((!?))
+import Data.IntMap ((!))
 import Data.List.Extra (firstJust, foldl')
 import qualified Data.Map.Strict as Map
-import Data.Maybe (fromMaybe, listToMaybe, mapMaybe)
+import Data.Maybe (fromMaybe, listToMaybe)
 import qualified Data.Set as Set
 import GHC.Float (int2Float)
 import qualified Game.Animation as Animation
@@ -177,7 +177,7 @@ update = do
           f k x = if x ^. key == k then Just x else Nothing
           keyHit k = case ((pl ^. playNotes) Map.!? k, firstJust (f k) (pl ^. tateren . notes)) of
             (Just (n : ns), _) -> do
-              whenJust ((pl ^. sounds) !? (n ^. value)) (\s -> playSounds %= (s :))
+              playSounds %= (((pl ^. sounds) ! (n ^. value)) :)
               let
                 diff = n ^. time - t
               if
@@ -196,7 +196,7 @@ update = do
                     judgementCount . bad += 1
                 | diff >= Time.fromSeconds (pl ^. currentBpm) 1 -> return ()
                 | otherwise -> judgementCount . poor += 1 >> judgement .= Just Animation.poor
-            (_, Just n) -> whenJust ((pl ^. sounds) !? (n ^. value)) (\s -> playSounds %= (s :))
+            (_, Just n) -> playSounds %= (((pl ^. sounds) ! (n ^. value)) :)
             (_, Nothing) -> return ()
         whenM (lift $ isKeyPressed KeyLeftShift) (keyHit Sc)
         whenM (lift $ isKeyPressed KeyZ) (keyHit K1)
@@ -218,7 +218,7 @@ update = do
         bombs %= (\b -> foldl' (flip (Map.update (Animation.update dt))) b [Sc, K1, K2])
         poors <- playNotes >%= (unzip . fmap (Time.get (t - Time.fromSeconds (pl ^. currentBpm) (23 / 60))))
         unless (all null poors) (judgementCount . poor += 1 >> judgement .= Just Animation.poor)
-        playSounds %= (mapMaybe (((pl ^. sounds) !?) . (^. value)) sounds1 ++)
+        playSounds %= (map (((pl ^. sounds) !) . (^. value)) sounds1 ++)
       whenM (lift $ isKeyPressed KeyEscape) (lift (mapM_ (`unloadSound` w) (pl ^. sounds)) >> appState .= initSelect)
 
 initTitle :: AppState
