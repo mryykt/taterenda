@@ -26,8 +26,9 @@ import Tateren.Types
 import qualified Time
 
 fromRawData :: RawChart -> Tateren
-fromRawData (RawChart cs mss _) = def & measures .~ ms & flip (foldr convertCommands) cs
+fromRawData (RawChart cs mss _) = def & measures .~ ms & flip (foldr convertCommands) filtered
   where
+    filtered = filter (\(Command _ _ v _ _) -> v /= 0) cs
     ms = (\(MeasureStart l s) -> Measure (int2Float l) (Time.fromInt s)) <$> mss
     convertCommands (Command typ t v _ _) = case typ of
       0 -> bgms %~ (Bgm (Time.fromInt t) v :)
