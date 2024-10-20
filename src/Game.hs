@@ -52,6 +52,7 @@ import Game.Types
   , playState
   , poor
   , sounds
+  , stop
   , tateren
   , textures
   , titleState
@@ -68,7 +69,7 @@ import Raylib.Util (blendMode, drawing)
 import Raylib.Util.Colors (black)
 import System.FilePath ((</>))
 import qualified Tateren
-import Tateren.Types (Key (..), bgms, bpmChanges, key, measures, notes, value)
+import Tateren.Types (Key (..), bgms, bpmChanges, key, measures, notes, stops, value)
 import Text.Printf (printf)
 import Time (HasTime (time))
 import qualified Time
@@ -155,6 +156,7 @@ update = do
                 ( Play
                     (Time.fromInt 0)
                     music.bpm
+                    Nothing
                     (ld ^. tateren)
                     (Map.fromList [(Sc, []), (K1, []), (K2, [])])
                     []
@@ -205,15 +207,20 @@ update = do
         whenM (lift $ isKeyDown KeyZ) (keys %= Set.insert K1)
         whenM (lift $ isKeyDown KeyX) (keys %= Set.insert K2)
         --  update
-        time %= Time.update dt (pl ^. currentBpm)
         sounds1 <- (tateren . bgms) >%= Time.get t
         notes1 <- (tateren . notes) >%= Time.get (t + lengthInDisplay)
         measures1 <- (tateren . measures) >%= Time.get (t + lengthInDisplay)
         bpmChanges1 <- (tateren . bpmChanges) >%= Time.get t
+        stops1 <- (tateren . stops) >%= Time.get t
         let insertNote ns n = Map.update (Just . (++ [n])) (n ^. key) ns
         playNotes %= flip (foldl' insertNote) notes1
         playMeasures %= ((++ measures1) . dropWhile ((t >) . (^. time)))
         currentBpm %= (\b -> maybe b (int2Float . (^. value)) $ listToMaybe bpmChanges1)
+        case pl ^. stop of
+          Just st | st > 0 -> stop .= Just (Time.update (-dt) (pl ^. currentBpm) st)
+          _ -> do
+            stop .= listToMaybe (Time.fromInt . (^. value) <$> stops1)
+            time %= Time.update dt (pl ^. currentBpm)
         judgement %= (Animation.update dt =<<)
         bombs %= (\b -> foldl' (flip (Map.update (Animation.update dt))) b [Sc, K1, K2])
         poors <- playNotes >%= (unzip . fmap (Time.get (t - Time.fromSeconds (pl ^. currentBpm) (23 / 60))))

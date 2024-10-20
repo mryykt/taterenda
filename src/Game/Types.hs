@@ -46,6 +46,7 @@ data Load = Load {_loadTateren :: Tateren, _loadSounds :: Loader IntMap Sound}
 data Play = Play
   { _playTime :: Time
   , _playCurrentBpm :: Float
+  , _playStop :: Maybe Time
   , _playTateren :: Tateren
   , _playPlayNotes :: Map Key [Note]
   , _playPlayMeasures :: [Measure]
