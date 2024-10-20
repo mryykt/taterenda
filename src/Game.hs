@@ -226,6 +226,7 @@ update = do
         poors <- playNotes >%= (unzip . fmap (Time.get (t - Time.fromSeconds (pl ^. currentBpm) (23 / 60))))
         unless (all null poors) (judgementCount . poor += 1 >> judgement .= Just Animation.poor)
         playSounds %= (map (((pl ^. sounds) !) . (^. value)) sounds1 ++)
+      when (all null (pl ^. playNotes) && null (pl ^. tateren . notes) && null (pl ^. tateren . bgms)) $ appState .= initSelect
       whenM (lift $ isKeyPressed KeyEscape) (lift (mapM_ (`unloadSound` w) (pl ^. sounds)) >> appState .= initSelect)
 
 initTitle :: AppState
