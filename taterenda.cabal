@@ -30,6 +30,7 @@ library
       Game.Config
       Game.Draw
       Game.Resource
+      Game.Score
       Game.Transition
       Game.Types
       Music
@@ -68,6 +69,7 @@ library
     , microlens-mtl
     , microlens-th
     , mtl
+    , text
     , vector
   default-language: Haskell2010
 

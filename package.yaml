@@ -48,6 +48,7 @@ library:
   - extra
   - bytestring
   - containers
+  - text
   - cereal
   - filepath
   - async
