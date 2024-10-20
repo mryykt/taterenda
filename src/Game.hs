@@ -2,7 +2,7 @@
 
 module Game (mainLoop) where
 
-import Control.Monad.Extra (forM_, notM, orM, unless, when, whenJust, whenJustM, whenM, whileM)
+import Control.Monad.Extra (forM_, ifM, notM, orM, unless, when, whenJust, whenJustM, whenM, whileM)
 import Control.Monad.State.Strict
   ( StateT
   , evalStateT
@@ -126,6 +126,7 @@ update = do
           Quit -> close .= True
       whenM (lift $ isKeyPressed KeyEscape) (close .= True)
     SelectState _ -> do
+      ifM (lift $ isKeyDown KeyLeftShift) (musicList %= Music.selectAnother) (musicList %= Music.selectNormal)
       whenM
         (lift $ isKeyPressed KeyRight)
         $ musicList %= Music.next
@@ -261,7 +262,7 @@ draw = do
       SelectState _ -> do
         let (index, music) = Music.current ml
         dtexture t.select (Draw.vec (-60) (-80)) (Draw.rect (1 + 121 * int2Float (index `mod` 8)) (1 + 223 * int2Float (index `div` 8)) 120 160)
-        dtexture t.select (Draw.vec (-40) (-30)) (Draw.rect (1 + 81 * int2Float (index `mod` 8)) (162 + 223 * int2Float (index `div` 8)) 80 30)
+        dtexture t.select (Draw.vec (-40) (-30)) (Draw.rect (1 + 81 * int2Float (index `mod` 8)) (162 + (if Music.isAnother ml then 31 else 0) + 223 * int2Float (index `div` 8)) 80 30)
         when (index > 0) $ dtexture t.select (Draw.vec (-60) (-20)) (Draw.rect 649 162 13 11)
         when (index < 15) $ dtexture t.select (Draw.vec 47 (-20)) (Draw.rect 663 162 13 11)
         dtext (printf "%02d/16" (index + 1)) (Draw.vec 0 (-75)) True False

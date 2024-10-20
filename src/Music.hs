@@ -1,4 +1,4 @@
-module Music (Music, MusicList, name, genre, artist, bpm, difficulty, directory, chart, sounds, current, prev, next, selectAnother, selectNormal, list) where
+module Music (Music, MusicList, name, genre, artist, bpm, difficulty, directory, chart, sounds, current, prev, next, selectAnother, selectNormal, isAnother, list) where
 
 import Data.IntMap (IntMap)
 import Data.Tuple.Extra (second3)
@@ -40,6 +40,9 @@ selectAnother ml@(_, (i, _, m), _) = case m.another of
 
 selectNormal :: MusicList -> MusicList
 selectNormal ml@(_, (i, _, m), _) = second3 (const (i, m.normal, m)) ml
+
+isAnother :: MusicList -> Bool
+isAnother (_, (_, m, s), _) = m /= s.normal
 
 list :: MusicList
 list =
