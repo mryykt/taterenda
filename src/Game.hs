@@ -272,6 +272,7 @@ draw = do
         dtext "-ARTIST-------" (Draw.vec 0 35) True False
         dtext music.artist (Draw.vec (-56) 45) False False
         dtext (printf "BPM:%d" (round music.bpm :: Int)) (Draw.vec (-56) 65) False False
+      LoadState _ -> dtexture t.title (Draw.vec (-60) (-80)) (Draw.rect 122 1 120 160)
       PlayState pl -> do
         dtexture t.skin (Draw.vec (-60) (-80)) (Draw.rect 1 1 120 160)
         forM_ (pl ^. keys) $ \k -> do
