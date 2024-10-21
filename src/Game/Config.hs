@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
-
 module Game.Config (Config (..), read, write) where
 
 import Control.Monad.Extra (ifM)

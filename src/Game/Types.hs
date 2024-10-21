@@ -7,7 +7,7 @@ import Game.Animation (Animation)
 import Game.Config (Config)
 import Game.Draw (Rectangle, Texture, Vector)
 import Game.Resource (Loader)
-import Game.Scores (Scores)
+import Game.Scores (JudgementCount, Scores)
 import Game.Transition (Transition)
 import Lens.Micro (Lens', lens)
 import Lens.Micro.TH (makeFields, makeLenses)
@@ -47,7 +47,6 @@ data Load = Load {_loadTateren :: Tateren, _loadSounds :: Loader IntMap Sound}
 
 data Play = Play
   { _playTime :: Time
-  , _playExScore :: Int
   , _playGauge :: Float
   , _playCurrentBpm :: Float
   , _playStop :: Maybe Time
@@ -62,8 +61,6 @@ data Play = Play
   , _playTotalNotesCount :: Int
   , _playSounds :: IntMap Sound
   }
-
-data JudgementCount = JudgementCount {_great :: Int, _good :: Int, _bad :: Int, _poor :: Int}
 
 makeLenses ''Game
 makeLenses ''Title

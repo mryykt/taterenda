@@ -20,13 +20,13 @@ import qualified Game.Config as Config
 import Game.Draw ((|+|), (|-|))
 import qualified Game.Draw as Draw
 import qualified Game.Resource as Resource
+import Game.Scores (Score (..))
 import qualified Game.Scores as Scores
 import qualified Game.Transition as Transition
 import Game.Types
   ( AppState (..)
   , Game (Game)
   , HasGauge (gauge)
-  , JudgementCount (JudgementCount)
   , Load (..)
   , Play (Play)
   , Select (Select)
@@ -41,13 +41,13 @@ import Game.Types
   , currentBpm
   , cursor
   , drawer
-  , exScore
   , good
   , great
   , judgement
   , judgementCount
   , keys
   , musicList
+  , pgreat
   , playMeasures
   , playNotes
   , playSounds
@@ -156,7 +156,6 @@ update = do
               .= PlayState
                 ( Play
                     (Time.fromInt 0)
-                    0
                     20
                     music.bpm
                     Nothing
@@ -167,7 +166,7 @@ update = do
                     []
                     Nothing
                     Map.empty
-                    (JudgementCount 0 0 0 0)
+                    Scores.initJudge
                     (length $ ld ^. tateren . notes)
                     s
                 )
@@ -191,8 +190,8 @@ update = do
                     let heal = 800 / (int2Float (pl ^. totalNotesCount) + 700)
                     jt <-
                       if
-                        | abs diff <= Time.fromSeconds (pl ^. currentBpm) (1 / 60) -> exScore += 2 >> gauge %= min 100 . (+ heal) >> judgementCount . great += 1 >> return Animation.pgreat
-                        | abs diff <= Time.fromSeconds (pl ^. currentBpm) (4 / 60) -> exScore += 1 >> gauge %= min 100 . (+ heal) >> judgementCount . great += 1 >> return Animation.great
+                        | abs diff <= Time.fromSeconds (pl ^. currentBpm) (1 / 60) -> gauge %= min 100 . (+ heal) >> judgementCount . pgreat += 1 >> return Animation.pgreat
+                        | abs diff <= Time.fromSeconds (pl ^. currentBpm) (4 / 60) -> gauge %= min 100 . (+ heal) >> judgementCount . great += 1 >> return Animation.great
                         | otherwise -> gauge %= min 100 . (+ heal / 2) >> judgementCount . good += 1 >> return Animation.good
                     judgement .= Just jt
                     bombs %= Map.insert k Animation.bomb
@@ -234,7 +233,14 @@ update = do
         playSounds %= (mapMaybe (((pl ^. sounds) !?) . (^. value)) sounds1 ++)
       when (all null (pl ^. playNotes) && null (pl ^. tateren . notes) && null (pl ^. tateren . bgms)) $ do
         cm <- Music.current <$> use musicList
-        score' <- scores <%= Scores.update (snd cm) (pl ^. exScore)
+        score' <-
+          scores
+            <%= Scores.update
+              (snd cm)
+              (pl ^. gauge > 80)
+              False
+              (Scores.isFullCombo (pl ^. totalNotesCount) (pl ^. judgementCount))
+              (pl ^. judgementCount)
         lift $ Scores.write score'
         appState .= initSelect
       whenM (lift $ isKeyPressed KeyEscape) (lift (mapM_ (`unloadSound` w) (pl ^. sounds)) >> appState .= initSelect)
@@ -285,7 +291,7 @@ draw = do
         when (index > 0) $ dtexture t.select (Draw.vec (-60) (-20)) (Draw.rect 649 162 13 11)
         when (index < 15) $ dtexture t.select (Draw.vec 47 (-20)) (Draw.rect 663 162 13 11)
         dtext (printf "%02d/16" (index + 1)) (Draw.vec 0 (-75)) True False
-        whenJust (Scores.get music s) $ \v -> dtext (printf "HiScore:%4d" v) (Draw.vec 0 (-60)) True False
+        whenJust (Scores.get music s) $ \v -> dtext (printf "HiScore:%4d" (Scores.exScore v.judge)) (Draw.vec 0 (-60)) True False
         dtext (maybe "????" (`replicate` '*') music.difficulty) (Draw.vec 0 (-45)) True False
         dtext "-TITLE--------" (Draw.vec 0 5) True False
         dtext music.name (Draw.vec (-56) 15) False False
@@ -324,7 +330,7 @@ draw = do
           ( do
               forM_ [0 .. round (pl ^. gauge * 31 / 100) - 1] $ \i ->
                 dtexture t.skin (Draw.vec (-5 + 2 * int2Float i) 63) $ if i > 23 then Draw.rect 124 144 1 8 else Draw.rect 122 144 1 8
-              forM_ [(pl ^. judgementCount . great, -57), (pl ^. judgementCount . good, -33), (pl ^. judgementCount . bad, -9), (pl ^. judgementCount . poor, 15), (pl ^. exScore, 39)] $ \(c, y') -> do
+              forM_ [(pl ^. judgementCount . great + pl ^. judgementCount . pgreat, -57), (pl ^. judgementCount . good, -33), (pl ^. judgementCount . bad, -9), (pl ^. judgementCount . poor, 15), (Scores.exScore (pl ^. judgementCount), 39)] $ \(c, y') -> do
                 dtext (printf "%4d" c) (Draw.vec 15 y') False True
           )
         mapM_ playSound (pl ^. playSounds)

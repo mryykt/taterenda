@@ -39,6 +39,7 @@ default-extensions:
   - FlexibleContexts
   - FunctionalDependencies
   - OverloadedRecordDot
+  - OverloadedStrings
   - RankNTypes
   - FlexibleInstances
 
