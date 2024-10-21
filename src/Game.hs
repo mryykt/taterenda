@@ -233,7 +233,7 @@ update = do
         playSounds %= (mapMaybe (((pl ^. sounds) !?) . (^. value)) sounds1 ++)
       when (all null (pl ^. playNotes) && null (pl ^. tateren . notes) && null (pl ^. tateren . bgms)) $ do
         cm <- Music.current <$> use musicList
-        score' <-
+        scores' <-
           scores
             <%= Scores.update
               (snd cm)
@@ -241,7 +241,7 @@ update = do
               False
               (Scores.isFullCombo (pl ^. totalNotesCount) (pl ^. judgementCount))
               (pl ^. judgementCount)
-        lift $ Scores.write score'
+        lift $ Scores.write scores'
         appState .= initSelect
       whenM (lift $ isKeyPressed KeyEscape) (lift (mapM_ (`unloadSound` w) (pl ^. sounds)) >> appState .= initSelect)
 
