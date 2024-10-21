@@ -63,7 +63,7 @@ library:
   - JuicyPixels
 
 executables:
-  taterenda-exe:
+  taterenda-r:
     main:                Main.hs
     source-dirs:         app
     ghc-options:
