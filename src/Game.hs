@@ -20,11 +20,12 @@ import qualified Game.Config as Config
 import Game.Draw ((|+|), (|-|))
 import qualified Game.Draw as Draw
 import qualified Game.Resource as Resource
+import qualified Game.Scores as Scores
 import qualified Game.Transition as Transition
 import Game.Types
   ( AppState (..)
   , Game (Game)
-  , HasJudgementCount (judgementCount)
+  , HasGauge (gauge)
   , JudgementCount (JudgementCount)
   , Load (..)
   , Play (Play)
@@ -40,9 +41,11 @@ import Game.Types
   , currentBpm
   , cursor
   , drawer
+  , exScore
   , good
   , great
   , judgement
+  , judgementCount
   , keys
   , musicList
   , playMeasures
@@ -50,15 +53,17 @@ import Game.Types
   , playSounds
   , playState
   , poor
+  , scores
   , sounds
   , stop
   , tateren
   , textures
   , titleState
+  , totalNotesCount
   , window
   )
 import Lens.Micro (Lens', (^.))
-import Lens.Micro.Mtl (use, zoom, (%=), (+=), (.=))
+import Lens.Micro.Mtl (use, zoom, (%=), (+=), (-=), (.=), (<%=))
 import Music (bpm)
 import qualified Music
 import Raylib.Core (clearBackground, closeWindow, getFrameTime, getScreenHeight, getScreenWidth, initWindow, isKeyDown, isKeyPressed, setTargetFPS, setTraceLogLevel, toggleBorderlessWindowed)
@@ -80,6 +85,7 @@ mainLoop = init >>= evalStateT (whileM (notM $ update >> draw >> shouldClose) >>
 init :: IO Game
 init = do
   config <- Config.read
+  s <- Scores.read
   w <- initWindow config.width config.height "taterenda"
   when config.fullScreen toggleBorderlessWindowed
   ts <-
@@ -95,7 +101,7 @@ init = do
   setTargetFPS 60
   setTraceLogLevel LogNone
   let drawTexture = Draw.texture config'
-  return $ Game w config' False (drawTexture, Draw.text drawTexture ts.font) Music.list ts InitState
+  return $ Game w config' s False (drawTexture, Draw.text drawTexture ts.font) Music.list ts InitState
 
 update :: StateT Game IO ()
 update = do
@@ -150,6 +156,8 @@ update = do
               .= PlayState
                 ( Play
                     (Time.fromInt 0)
+                    0
+                    20
                     music.bpm
                     Nothing
                     (ld ^. tateren)
@@ -160,6 +168,7 @@ update = do
                     Nothing
                     Map.empty
                     (JudgementCount 0 0 0 0)
+                    (length $ ld ^. tateren . notes)
                     s
                 )
         )
@@ -179,20 +188,22 @@ update = do
                 diff = n ^. time - t
               if
                 | abs diff <= Time.fromSeconds (pl ^. currentBpm) (10 / 60) -> do
+                    let heal = 800 / (int2Float (pl ^. totalNotesCount) + 700)
                     jt <-
                       if
-                        | abs diff <= Time.fromSeconds (pl ^. currentBpm) (1 / 60) -> judgementCount . great += 1 >> return Animation.pgreat
-                        | abs diff <= Time.fromSeconds (pl ^. currentBpm) (4 / 60) -> judgementCount . great += 1 >> return Animation.great
-                        | otherwise -> judgementCount . good += 1 >> return Animation.good
+                        | abs diff <= Time.fromSeconds (pl ^. currentBpm) (1 / 60) -> exScore += 2 >> gauge %= min 100 . (+ heal) >> judgementCount . great += 1 >> return Animation.pgreat
+                        | abs diff <= Time.fromSeconds (pl ^. currentBpm) (4 / 60) -> exScore += 1 >> gauge %= min 100 . (+ heal) >> judgementCount . great += 1 >> return Animation.great
+                        | otherwise -> gauge %= min 100 . (+ heal / 2) >> judgementCount . good += 1 >> return Animation.good
                     judgement .= Just jt
                     bombs %= Map.insert k Animation.bomb
                     playNotes %= Map.insert k ns
                 | abs diff <= Time.fromSeconds (pl ^. currentBpm) (23 / 60) -> do
+                    gauge -= 2
                     judgement .= Just Animation.bad
                     playNotes %= Map.insert k ns
                     judgementCount . bad += 1
                 | diff >= Time.fromSeconds (pl ^. currentBpm) 1 -> return ()
-                | otherwise -> judgementCount . poor += 1 >> judgement .= Just Animation.poor
+                | otherwise -> gauge -= 2 >> judgementCount . poor += 1 >> judgement .= Just Animation.poor
             (_, Just n) -> whenJust ((pl ^. sounds) !? (n ^. value)) (\s -> playSounds %= (s :))
             (_, Nothing) -> return ()
         whenM (lift $ isKeyPressed KeyLeftShift) (keyHit Sc)
@@ -219,9 +230,13 @@ update = do
         judgement %= (Animation.update dt =<<)
         bombs %= (\b -> foldl' (flip (Map.update (Animation.update dt))) b [Sc, K1, K2])
         poors <- playNotes >%= (unzip . fmap (Time.get (t - Time.fromSeconds (pl ^. currentBpm) (23 / 60))))
-        unless (all null poors) (judgementCount . poor += 1 >> judgement .= Just Animation.poor)
+        unless (all null poors) (gauge -= 6 >> judgementCount . poor += 1 >> judgement .= Just Animation.poor)
         playSounds %= (mapMaybe (((pl ^. sounds) !?) . (^. value)) sounds1 ++)
-      when (all null (pl ^. playNotes) && null (pl ^. tateren . notes) && null (pl ^. tateren . bgms)) $ appState .= initSelect
+      when (all null (pl ^. playNotes) && null (pl ^. tateren . notes) && null (pl ^. tateren . bgms)) $ do
+        cm <- Music.current <$> use musicList
+        score' <- scores <%= Scores.update (snd cm) (pl ^. exScore)
+        lift $ Scores.write score'
+        appState .= initSelect
       whenM (lift $ isKeyPressed KeyEscape) (lift (mapM_ (`unloadSound` w) (pl ^. sounds)) >> appState .= initSelect)
 
 initTitle :: AppState
@@ -253,6 +268,7 @@ draw = do
   t <- use textures
   ml <- use musicList
   state <- use appState
+  s <- use scores
   lift $ drawing $ do
     clearBackground black
     case state of
@@ -269,7 +285,7 @@ draw = do
         when (index > 0) $ dtexture t.select (Draw.vec (-60) (-20)) (Draw.rect 649 162 13 11)
         when (index < 15) $ dtexture t.select (Draw.vec 47 (-20)) (Draw.rect 663 162 13 11)
         dtext (printf "%02d/16" (index + 1)) (Draw.vec 0 (-75)) True False
-        dtext (printf "HiScore:XXXX") (Draw.vec 0 (-60)) True False
+        whenJust (Scores.get music s) $ \v -> dtext (printf "HiScore:%4d" v) (Draw.vec 0 (-60)) True False
         dtext (maybe "????" (`replicate` '*') music.difficulty) (Draw.vec 0 (-45)) True False
         dtext "-TITLE--------" (Draw.vec 0 5) True False
         dtext music.name (Draw.vec (-56) 15) False False
@@ -305,8 +321,11 @@ draw = do
         drawBomb K2 (37 - 60)
         blendMode
           BlendAdditive
-          ( forM_ [(pl ^. judgementCount . great, -57), (pl ^. judgementCount . good, -33), (pl ^. judgementCount . bad, -9), (pl ^. judgementCount . poor, 15)] $ \(c, y') -> do
-              dtext (printf "%4d" c) (Draw.vec 15 y') False True
+          ( do
+              forM_ [0 .. round (pl ^. gauge * 31 / 100) - 1] $ \i ->
+                dtexture t.skin (Draw.vec (-5 + 2 * int2Float i) 63) $ if i > 23 then Draw.rect 124 144 1 8 else Draw.rect 122 144 1 8
+              forM_ [(pl ^. judgementCount . great, -57), (pl ^. judgementCount . good, -33), (pl ^. judgementCount . bad, -9), (pl ^. judgementCount . poor, 15), (pl ^. exScore, 39)] $ \(c, y') -> do
+                dtext (printf "%4d" c) (Draw.vec 15 y') False True
           )
         mapM_ playSound (pl ^. playSounds)
       _ -> return ()

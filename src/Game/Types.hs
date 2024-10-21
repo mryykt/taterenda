@@ -7,6 +7,7 @@ import Game.Animation (Animation)
 import Game.Config (Config)
 import Game.Draw (Rectangle, Texture, Vector)
 import Game.Resource (Loader)
+import Game.Scores (Scores)
 import Game.Transition (Transition)
 import Lens.Micro (Lens', lens)
 import Lens.Micro.TH (makeFields, makeLenses)
@@ -19,6 +20,7 @@ import Time (HasTime (time), Time)
 data Game = Game
   { _window :: WindowResources
   , _config :: Config
+  , _scores :: Scores
   , _close :: Bool
   , _drawer :: (Texture -> Vector -> Rectangle -> IO (), String -> Vector -> Bool -> Bool -> IO ())
   , _musicList :: MusicList
@@ -45,6 +47,8 @@ data Load = Load {_loadTateren :: Tateren, _loadSounds :: Loader IntMap Sound}
 
 data Play = Play
   { _playTime :: Time
+  , _playExScore :: Int
+  , _playGauge :: Float
   , _playCurrentBpm :: Float
   , _playStop :: Maybe Time
   , _playTateren :: Tateren
@@ -55,6 +59,7 @@ data Play = Play
   , _playJudgement :: Maybe Animation
   , _playBombs :: Map Key Animation
   , _playJudgementCount :: JudgementCount
+  , _playTotalNotesCount :: Int
   , _playSounds :: IntMap Sound
   }
 

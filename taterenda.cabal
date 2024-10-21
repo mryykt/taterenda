@@ -30,7 +30,7 @@ library
       Game.Config
       Game.Draw
       Game.Resource
-      Game.Score
+      Game.Scores
       Game.Transition
       Game.Types
       Music

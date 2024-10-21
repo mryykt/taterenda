@@ -1,6 +1,7 @@
-module Music (Music, MusicList, name, genre, artist, bpm, difficulty, directory, chart, sounds, current, prev, next, selectAnother, selectNormal, isAnother, list) where
+module Music (Music, MusicList, name, genre, artist, bpm, difficulty, directory, chart, sounds, current, prev, next, selectAnother, selectNormal, isAnother, list, normalizeName) where
 
 import Data.IntMap (IntMap)
+import Data.List.Extra (trim)
 import Data.Tuple.Extra (second3)
 import qualified Music.Sounds as Sounds
 
@@ -21,6 +22,9 @@ data Music = Music
 
 instance Eq Music where
   m1 == m2 = m1.name == m2.name
+
+normalizeName :: String -> String
+normalizeName = unwords . map trim . lines
 
 current :: MusicList -> (Int, Music)
 current (_, (i, c, _), _) = (i, c)
