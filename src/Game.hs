@@ -69,7 +69,7 @@ import Music (bpm)
 import qualified Music
 import Raylib.Core (clearBackground, closeWindow, getFrameTime, getScreenHeight, getScreenWidth, initWindow, isKeyDown, isKeyPressed, setTargetFPS, setTraceLogLevel, toggleBorderlessWindowed)
 import Raylib.Core.Audio (initAudioDevice, playSound, unloadSound)
-import Raylib.Types (BlendMode (BlendAdditive), KeyboardKey (KeyDown, KeyEnter, KeyEscape, KeyLeft, KeyLeftShift, KeyRight, KeyUp), TraceLogLevel (LogNone))
+import Raylib.Types (BlendMode (BlendAdditive), KeyboardKey (KeyDown, KeyEnter, KeyEscape, KeyG, KeyLeft, KeyLeftShift, KeyRight, KeyUp), TraceLogLevel (LogNone))
 import Raylib.Util (blendMode, drawing)
 import Raylib.Util.Colors (black)
 import System.FilePath ((</>))
@@ -147,6 +147,9 @@ update = do
       whenM
         (lift $ isKeyPressed KeyEscape)
         (appState .= initTitle)
+      whenM
+        (lift $ isKeyPressed KeyG)
+        (appState .= ConfigState)
     LoadState ld -> do
       (_, music) <- Music.current <$> use musicList
       whenJustM
@@ -256,6 +259,10 @@ update = do
       whenM
         (lift $ isKeyPressed KeyEscape)
         (appState .= initTitle)
+    ConfigState ->
+      whenM
+        (lift $ isKeyPressed KeyEscape)
+        (appState .= initSelect)
 
 initTitle :: AppState
 initTitle = TitleState (Title Start (Transition.init (Draw.vec (-40) 40)))
