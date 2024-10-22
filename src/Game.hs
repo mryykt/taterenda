@@ -141,10 +141,9 @@ update = do
         $ do
           (_, curr) <- Music.current <$> use musicList
           let dir = "sound" </> curr.directory
-          tate <- lift $ Tateren.load $ dir </> curr.chart
-          loader <- lift $ Resource.soundLoader $ (dir </>) <$> curr.sounds
-          appState .= LoadState (Load tate loader)
-          return ()
+          whenJustM (lift $ Tateren.load $ dir </> curr.chart) $ \tate -> do
+            loader <- lift $ Resource.soundLoader $ (dir </>) <$> curr.sounds
+            appState .= LoadState (Load tate loader)
       whenM
         (lift $ isKeyPressed KeyEscape)
         (appState .= initTitle)

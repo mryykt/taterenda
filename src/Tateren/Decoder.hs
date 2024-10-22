@@ -1,8 +1,11 @@
 module Tateren.Decoder (Command (..), MeasureStart (..), Unknown (..), RawChart (..), load) where
 
 import Control.Monad (replicateM)
+import Control.Monad.Extra (ifM)
 import qualified Data.ByteString as BS
-import Data.Serialize.Get
+import Data.Either.Extra (eitherToMaybe)
+import Data.Serialize.Get (Get, getInt16le, getInt32le, runGet)
+import Raylib.Core (fileExists)
 
 data Command = Command Int Int Int Int Int
 
@@ -30,5 +33,9 @@ getRawChart = do
   return $
     RawChart commands measureStarts unknowns
 
-load :: FilePath -> IO RawChart
-load = fmap (either undefined id . runGet getRawChart) . BS.readFile
+load :: FilePath -> IO (Maybe RawChart)
+load path = do
+  ifM
+    (fileExists path)
+    (eitherToMaybe . runGet getRawChart <$> BS.readFile path)
+    (return Nothing)

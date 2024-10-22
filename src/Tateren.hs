@@ -36,5 +36,5 @@ fromRawData (RawChart cs mss _) = def & measures .~ ms & flip (foldr convertComm
       0xd -> notes %~ (Object (Time.fromInt t) v Sc :)
       _ -> error ("ここに来たとしたら実装漏れ:" ++ show typ)
 
-load :: FilePath -> IO Tateren
-load = (fromRawData <$>) . D.load
+load :: FilePath -> IO (Maybe Tateren)
+load = fmap (fmap fromRawData) . D.load
