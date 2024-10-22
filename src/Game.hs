@@ -207,12 +207,12 @@ update = do
                 | otherwise -> gauge -= 2 >> judgementCount . poor += 1 >> judgement .= Just Animation.poor
             (_, Just n) -> whenJust ((pl ^. sounds) !? (n ^. value)) (\s -> playSounds %= (s :))
             (_, Nothing) -> return ()
-        whenM (lift $ isKeyPressed cfg.scratchKey) (keyHit Sc)
-        whenM (lift $ isKeyPressed cfg.key1) (keyHit K1)
-        whenM (lift $ isKeyPressed cfg.key2) (keyHit K2)
-        whenM (lift $ isKeyDown cfg.scratchKey) (keys %= Set.insert Sc)
-        whenM (lift $ isKeyDown cfg.key1) (keys %= Set.insert K1)
-        whenM (lift $ isKeyDown cfg.key2) (keys %= Set.insert K2)
+        forM_
+          [(Sc, cfg.scratchKey), (K1, cfg.key1), (K2, cfg.key2)]
+          ( \(typ, k) -> do
+              whenM (lift $ isKeyPressed k) (keyHit typ)
+              whenM (lift $ isKeyDown k) (keys %= Set.insert typ)
+          )
         --  update
         sounds1 <- (tateren . bgms) >%= Time.get t
         notes1 <- (tateren . notes) >%= Time.get (t + lengthInDisplay)
