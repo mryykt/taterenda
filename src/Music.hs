@@ -73,7 +73,7 @@ list =
 
 frozen, zionia, grave, graveA, abacyber, platinum, llr, ld, empire, empireA, a3, a3A, a2, a2A, ark, arkA, wanderer, witchcraft, witchcraftA, l9, _2002, _2002A, binary :: Music
 frozen = Music "Frozen Bond" "ballade" "paraoka" 106 (Just 1) "frozen" "frozen.ttr" Sounds.frozen
-zionia = Music "Zionia Garden" "progressive" "paraoka" 172 (Just 2) "zionia" "zionia.ttr" Sounds.frozen
+zionia = Music "Zionia Garden" "progressive" "paraoka" 172 (Just 2) "zionia" "zionia.ttr" Sounds.zionia
 grave = Music "rainy\n   graveyard" "fold groove" "paraoka" 115 (Just 2) "grave" "grave.ttr" Sounds.grave
 graveA = Music "rainy graveyard\n(autumn-taste)" "folk groove" "paraoka\nRemix:doctorR" 115 Nothing "grave" "grave_a.ttr" Sounds.graveA
 abacyber = Music "ABANDONED\n       CYBER" "digi-rock" "Remixe:paraoka" 155 (Just 3) "abacyber" "abacyber.ttr" Sounds.abacyber
