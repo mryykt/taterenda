@@ -1,9 +1,10 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Game.Config (Config (..), read, write) where
+module Game.Config (Config (..), read, write, update) where
 
 import Control.Monad.Extra (ifM)
+import Control.Monad.State.Strict (MonadTrans (lift), StateT)
 import Data.Aeson.Micro
   ( FromJSON (..)
   , ToJSON (..)
@@ -17,8 +18,11 @@ import Data.Aeson.Micro
 import qualified Data.ByteString as BS
 import Data.Maybe (fromMaybe)
 import qualified Data.Text as Text
-import Raylib.Core (fileExists)
-import Raylib.Types (KeyboardKey (..))
+import Raylib.Core (clearBackground, fileExists)
+import Raylib.Types (KeyboardKey (..), Rectangle (Rectangle))
+import Raylib.Util (drawing)
+import qualified Raylib.Util.Colors as Colors
+import Raylib.Util.GUI
 import Prelude hiding (read)
 import qualified Prelude
 
@@ -68,6 +72,12 @@ read =
     (fileExists "config.json")
     (fromMaybe (error "config file is invalid") . decodeStrict <$> BS.readFile "config.json")
     (write def >> return def)
+
+update :: StateT Config IO ()
+update = do
+  lift $ drawing $ do
+    clearBackground Colors.black
+    guiGroupBox (Rectangle 10 10 500 200) (Just "window")
 
 def :: Config
 def =

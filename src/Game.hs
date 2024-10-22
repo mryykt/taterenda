@@ -44,6 +44,7 @@ import Game.Types
   , drawer
   , good
   , great
+  , isConfigState
   , judgement
   , judgementCount
   , keys
@@ -259,7 +260,8 @@ update = do
       whenM
         (lift $ isKeyPressed KeyEscape)
         (appState .= initTitle)
-    ConfigState ->
+    ConfigState -> do
+      zoom config Config.update
       whenM
         (lift $ isKeyPressed KeyEscape)
         (appState .= initSelect)
@@ -297,7 +299,7 @@ draw = do
   ml <- use musicList
   state <- use appState
   s <- use scores
-  lift $ drawing $ do
+  unless (isConfigState state) $ lift $ drawing $ do
     clearBackground black
     case state of
       TitleState tit -> do

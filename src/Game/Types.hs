@@ -83,3 +83,7 @@ playState = lens getter setter
     getter _ = undefined
     setter (PlayState _) y = PlayState y
     setter _ _ = undefined
+
+isConfigState :: AppState -> Bool
+isConfigState ConfigState = True
+isConfigState _ = False
