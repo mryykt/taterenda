@@ -35,7 +35,7 @@ data Textures = Textures
   , title :: Texture
   }
 
-data AppState = InitState | TitleState Title | SelectState Select | LoadState Load | PlayState Play
+data AppState = InitState | TitleState Title | SelectState Select | LoadState Load | PlayState Play | HiScoreState Select
 
 data Title = Title {_cursor :: TitleCusor, _bar :: Transition}
 

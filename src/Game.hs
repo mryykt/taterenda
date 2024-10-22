@@ -124,7 +124,7 @@ update = do
         (lift $ isKeyPressed KeyEnter)
         $ case tit ^. cursor of
           Start -> appState .= initSelect
-          HiScore -> undefined
+          HiScore -> appState .= initHiScore
           Quit -> close .= True
       whenM (lift $ isKeyPressed KeyEscape) (close .= True)
     SelectState _ -> do
@@ -244,12 +244,26 @@ update = do
         lift $ Scores.write scores'
         appState .= initSelect
       whenM (lift $ isKeyPressed KeyEscape) (lift (mapM_ (`unloadSound` w) (pl ^. sounds)) >> appState .= initSelect)
+    HiScoreState _ -> do
+      ifM (lift $ isKeyDown KeyLeftShift) (musicList %= Music.selectAnother) (musicList %= Music.selectNormal)
+      whenM
+        (lift $ isKeyPressed KeyRight)
+        $ musicList %= Music.next
+      whenM
+        (lift $ isKeyPressed KeyLeft)
+        $ musicList %= Music.prev
+      whenM
+        (lift $ isKeyPressed KeyEscape)
+        (appState .= initTitle)
 
 initTitle :: AppState
 initTitle = TitleState (Title Start (Transition.init (Draw.vec (-40) 40)))
 
 initSelect :: AppState
 initSelect = SelectState (Select (Transition.init (Draw.vec 0 0)) (Transition.init (Draw.vec 0 0)))
+
+initHiScore :: AppState
+initHiScore = HiScoreState (Select (Transition.init (Draw.vec 0 0)) (Transition.init (Draw.vec 0 0)))
 
 (%?=) :: Lens' a b -> (b -> Maybe b) -> StateT a IO Bool
 l %?= f = do
@@ -334,6 +348,21 @@ draw = do
                 dtext (printf "%4d" c) (Draw.vec 15 y') False True
           )
         mapM_ playSound (pl ^. playSounds)
+      HiScoreState _ -> do
+        let (index, music) = Music.current ml
+        dtexture t.select (Draw.vec (-60) (-80)) (Draw.rect (1 + 121 * int2Float (index `mod` 8)) (1 + 223 * int2Float (index `div` 8)) 120 160)
+        dtexture t.select (Draw.vec (-40) (-40)) (Draw.rect (1 + 81 * int2Float (index `mod` 8)) (162 + (if Music.isAnother ml then 31 else 0) + 223 * int2Float (index `div` 8)) 80 30)
+        when (index > 0) $ dtexture t.select (Draw.vec (-60) (-30)) (Draw.rect 649 162 13 11)
+        when (index < 15) $ dtexture t.select (Draw.vec 47 (-30)) (Draw.rect 663 162 13 11)
+        dtext (printf "%02d/16" (index + 1)) (Draw.vec 0 (-75)) True False
+        dtext music.name (Draw.vec (-56) (-5)) False False
+        whenJust (Scores.get (snd $ Music.current ml) s) $ \score -> do
+          dtext (printf "Score :%d" $ Scores.exScore score.judge) (Draw.vec (-56) 20) False False
+          dtext (printf "PGREAT:%d" $ score.judge ^. pgreat) (Draw.vec (-56) 30) False False
+          dtext (printf "GREAT :%d" $ score.judge ^. great) (Draw.vec (-56) 40) False False
+          dtext (printf "GOOD  :%d" $ score.judge ^. good) (Draw.vec (-56) 50) False False
+          dtext (printf "BAD   :%d" $ score.judge ^. bad) (Draw.vec (-56) 60) False False
+          dtext (printf "POOR  :%d" $ score.judge ^. poor) (Draw.vec (-56) 70) False False
       _ -> return ()
 
 lengthInDisplay :: (Fractional t) => t
