@@ -38,6 +38,7 @@ import Game.Types
   , bar
   , bombs
   , close
+  , config
   , currentBpm
   , cursor
   , drawer
@@ -68,7 +69,7 @@ import Music (bpm)
 import qualified Music
 import Raylib.Core (clearBackground, closeWindow, getFrameTime, getScreenHeight, getScreenWidth, initWindow, isKeyDown, isKeyPressed, setTargetFPS, setTraceLogLevel, toggleBorderlessWindowed)
 import Raylib.Core.Audio (initAudioDevice, playSound, unloadSound)
-import Raylib.Types (BlendMode (BlendAdditive), KeyboardKey (KeyDown, KeyEnter, KeyEscape, KeyLeft, KeyLeftShift, KeyRight, KeyUp, KeyX, KeyZ), TraceLogLevel (LogNone))
+import Raylib.Types (BlendMode (BlendAdditive), KeyboardKey (KeyDown, KeyEnter, KeyEscape, KeyLeft, KeyLeftShift, KeyRight, KeyUp), TraceLogLevel (LogNone))
 import Raylib.Util (blendMode, drawing)
 import Raylib.Util.Colors (black)
 import System.FilePath ((</>))
@@ -84,10 +85,10 @@ mainLoop = init >>= evalStateT (whileM (notM $ update >> draw >> shouldClose) >>
 
 init :: IO Game
 init = do
-  config <- Config.read
+  cfg <- Config.read
   s <- Scores.read
-  w <- initWindow config.width config.height "taterenda"
-  when config.fullScreen toggleBorderlessWindowed
+  w <- initWindow cfg.width cfg.height "taterenda"
+  when cfg.fullScreen toggleBorderlessWindowed
   ts <-
     Textures
       <$> Resource.loadTexture "font.bmp"
@@ -96,7 +97,7 @@ init = do
       <*> Resource.loadTexture "title.bmp"
   aw <- getScreenWidth
   ah <- getScreenHeight
-  let config' = config{actualWidth = int2Float aw, actualHeight = int2Float ah}
+  let config' = cfg{actualWidth = int2Float aw, actualHeight = int2Float ah}
   initAudioDevice
   setTargetFPS 60
   setTraceLogLevel LogNone
@@ -172,6 +173,7 @@ update = do
                 )
         )
     PlayState pl -> do
+      cfg <- use config
       zoom (appState . playState) $ do
         keys .= Set.empty
         playSounds .= []
@@ -205,12 +207,12 @@ update = do
                 | otherwise -> gauge -= 2 >> judgementCount . poor += 1 >> judgement .= Just Animation.poor
             (_, Just n) -> whenJust ((pl ^. sounds) !? (n ^. value)) (\s -> playSounds %= (s :))
             (_, Nothing) -> return ()
-        whenM (lift $ isKeyPressed KeyLeftShift) (keyHit Sc)
-        whenM (lift $ isKeyPressed KeyZ) (keyHit K1)
-        whenM (lift $ isKeyPressed KeyX) (keyHit K2)
-        whenM (lift $ isKeyDown KeyLeftShift) (keys %= Set.insert Sc)
-        whenM (lift $ isKeyDown KeyZ) (keys %= Set.insert K1)
-        whenM (lift $ isKeyDown KeyX) (keys %= Set.insert K2)
+        whenM (lift $ isKeyPressed cfg.scratchKey) (keyHit Sc)
+        whenM (lift $ isKeyPressed cfg.key1) (keyHit K1)
+        whenM (lift $ isKeyPressed cfg.key2) (keyHit K2)
+        whenM (lift $ isKeyDown cfg.scratchKey) (keys %= Set.insert Sc)
+        whenM (lift $ isKeyDown cfg.key1) (keys %= Set.insert K1)
+        whenM (lift $ isKeyDown cfg.key2) (keys %= Set.insert K2)
         --  update
         sounds1 <- (tateren . bgms) >%= Time.get t
         notes1 <- (tateren . notes) >%= Time.get (t + lengthInDisplay)
