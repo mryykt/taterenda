@@ -9,12 +9,9 @@ import Tateren.Decoder
   )
 import qualified Tateren.Decoder as D
 import Tateren.Types
-  ( Bgm (Bgm)
-  , BpmChange (BpmChange)
-  , Key (..)
+  ( Key (..)
   , Measure (Measure)
-  , Note (Note)
-  , Stop (Stop)
+  , Object (Object)
   , Tateren
   , bgms
   , bpmChanges
@@ -31,12 +28,12 @@ fromRawData (RawChart cs mss _) = def & measures .~ ms & flip (foldr convertComm
     filtered = filter (\(Command _ _ v _ _) -> v /= 0) cs
     ms = (\(MeasureStart l s) -> Measure (int2Float l) (Time.fromInt s)) <$> mss
     convertCommands (Command typ t v _ _) = case typ of
-      0 -> bgms %~ (Bgm (Time.fromInt t) v :)
-      1 -> bpmChanges %~ (BpmChange (Time.fromInt t) v :)
-      2 -> stops %~ (Stop (Time.fromInt t) v :)
-      0xb -> notes %~ (Note K1 (Time.fromInt t) v :)
-      0xc -> notes %~ (Note K2 (Time.fromInt t) v :)
-      0xd -> notes %~ (Note Sc (Time.fromInt t) v :)
+      0 -> bgms %~ (Object (Time.fromInt t) v () :)
+      1 -> bpmChanges %~ (Object (Time.fromInt t) v () :)
+      2 -> stops %~ (Object (Time.fromInt t) v () :)
+      0xb -> notes %~ (Object (Time.fromInt t) v K1 :)
+      0xc -> notes %~ (Object (Time.fromInt t) v K2 :)
+      0xd -> notes %~ (Object (Time.fromInt t) v Sc :)
       _ -> error ("ここに来たとしたら実装漏れ:" ++ show typ)
 
 load :: FilePath -> IO Tateren

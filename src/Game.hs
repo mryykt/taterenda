@@ -74,7 +74,7 @@ import Raylib.Util (blendMode, drawing)
 import Raylib.Util.Colors (black)
 import System.FilePath ((</>))
 import qualified Tateren
-import Tateren.Types (Key (..), bgms, bpmChanges, key, measures, notes, stops, value)
+import Tateren.Types (Key (..), bgms, bpmChanges, ext, measures, notes, stops, value)
 import Text.Printf (printf)
 import Time (HasTime (time))
 import qualified Time
@@ -181,15 +181,15 @@ update = do
 
         -- keyboard control
         let
-          f k x = if x ^. key == k then Just x else Nothing
+          f k x = if x ^. ext == k then Just x else Nothing
           keyHit k = case ((pl ^. playNotes) Map.!? k, firstJust (f k) (pl ^. tateren . notes)) of
             (Just (n : ns), _) -> do
               whenJust ((pl ^. sounds) !? (n ^. value)) (\s -> playSounds %= (s :))
               let
                 diff = n ^. time - t
+                heal = 800 / (int2Float (pl ^. totalNotesCount) + 700)
               if
                 | abs diff <= Time.fromSeconds (pl ^. currentBpm) (10 / 60) -> do
-                    let heal = 800 / (int2Float (pl ^. totalNotesCount) + 700)
                     jt <-
                       if
                         | abs diff <= Time.fromSeconds (pl ^. currentBpm) (1 / 60) -> gauge %= min 100 . (+ heal) >> judgementCount . pgreat += 1 >> return Animation.pgreat
@@ -219,7 +219,7 @@ update = do
         measures1 <- (tateren . measures) >%= Time.get (t + lengthInDisplay)
         bpmChanges1 <- (tateren . bpmChanges) >%= Time.get t
         stops1 <- (tateren . stops) >%= Time.get t
-        let insertNote ns n = Map.update (Just . (++ [n])) (n ^. key) ns
+        let insertNote ns n = Map.update (Just . (++ [n])) (n ^. ext) ns
         playNotes %= flip (foldl' insertNote) notes1
         playMeasures %= ((++ measures1) . dropWhile ((t >) . (^. time)))
         currentBpm %= (\b -> maybe b (int2Float . (^. value)) $ listToMaybe bpmChanges1)
@@ -329,7 +329,7 @@ draw = do
         forM_ (pl ^. playNotes) $
           mapM_
             ( \n -> do
-                let (x, range) = case n ^. key of
+                let (x, range) = case n ^. ext of
                       Sc -> (9 - 60, Draw.rect 122 141 16 2)
                       K1 -> (26 - 60, Draw.rect 139 141 9 2)
                       K2 -> (36 - 60, Draw.rect 139 141 9 2)
