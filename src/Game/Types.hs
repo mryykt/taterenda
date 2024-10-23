@@ -4,7 +4,7 @@ import Data.IntMap (IntMap)
 import Data.Map.Strict (Map)
 import Data.Set (Set)
 import Game.Animation (Animation)
-import Game.Config (Config)
+import Game.Config (Config, EditMode)
 import Game.Draw (Rectangle, Texture, Vector)
 import Game.Resource (Loader)
 import Game.Scores (JudgementCount, Scores)
@@ -35,7 +35,7 @@ data Textures = Textures
   , title :: Texture
   }
 
-data AppState = InitState | TitleState Title | SelectState Select | LoadState Load | PlayState Play | HiScoreState Select | ConfigState
+data AppState = InitState | TitleState Title | SelectState Select | LoadState Load | PlayState Play | HiScoreState Select | ConfigState EditMode
 
 data Title = Title {_cursor :: TitleCusor, _bar :: Transition}
 
@@ -85,5 +85,5 @@ playState = lens getter setter
     setter _ _ = undefined
 
 isConfigState :: AppState -> Bool
-isConfigState ConfigState = True
+isConfigState (ConfigState _) = True
 isConfigState _ = False

@@ -150,7 +150,7 @@ update = do
         (appState .= initTitle)
       whenM
         (lift $ isKeyPressed KeyG)
-        (appState .= ConfigState)
+        (appState .= ConfigState Config.initEditMode)
     LoadState ld -> do
       (_, music) <- Music.current <$> use musicList
       whenJustM
@@ -260,8 +260,9 @@ update = do
       whenM
         (lift $ isKeyPressed KeyEscape)
         (appState .= initTitle)
-    ConfigState -> do
-      zoom config Config.update
+    ConfigState editMode -> do
+      editMode' <- zoom config (Config.update editMode)
+      appState .= ConfigState editMode'
       whenM
         (lift $ isKeyPressed KeyEscape)
         (appState .= initSelect)
