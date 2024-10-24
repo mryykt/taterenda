@@ -2,9 +2,9 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Game.Config (Config (..), EditMode, initEditMode, read, write, update) where
+module Game.Config (Config (..), EditMode, initEditMode, read, write, update, apply, setWindow) where
 
-import Control.Monad.Extra (ifM)
+import Control.Monad.Extra (ifM, unlessM, whenM)
 import Control.Monad.State.Strict (MonadState (get), MonadTrans (lift), StateT, put)
 import Data.Aeson.Micro
   ( FromJSON (..)
@@ -20,8 +20,18 @@ import qualified Data.ByteString as BS
 import Data.IORef (newIORef, readIORef, writeIORef)
 import Data.Maybe (fromMaybe)
 import qualified Data.Text as Text
-import Raylib.Core (clearBackground, fileExists, getKeyPressed)
-import Raylib.Types (KeyboardKey (..), Rectangle (Rectangle))
+import GHC.Float (int2Float)
+import Raylib.Core
+  ( clearBackground
+  , fileExists
+  , getKeyPressed
+  , getScreenHeight
+  , getScreenWidth
+  , isWindowState
+  , setWindowSize
+  , toggleBorderlessWindowed
+  )
+import Raylib.Types
 import Raylib.Util (drawing)
 import qualified Raylib.Util.Colors as Colors
 import Raylib.Util.GUI
@@ -131,6 +141,28 @@ keyConfig rect value editMode = do
         else return (False, value)
     else
       return (toggled, value)
+
+apply :: StateT Config IO ()
+apply = do
+  cfg <- get
+  cfg' <- lift $ do
+    write cfg
+    setWindow cfg
+  put cfg'
+
+setWindow :: Config -> IO Config
+setWindow cfg = do
+  if cfg.fullScreen
+    then unlessM isWindowBorderless toggleBorderlessWindowed
+    else do
+      whenM isWindowBorderless toggleBorderlessWindowed
+      setWindowSize cfg.width cfg.height
+  aw <- getScreenWidth
+  ah <- getScreenHeight
+  return cfg{actualWidth = int2Float aw, actualHeight = int2Float ah}
+
+isWindowBorderless :: IO Bool
+isWindowBorderless = isWindowState [BorderlessWindowedMode]
 
 def :: Config
 def =

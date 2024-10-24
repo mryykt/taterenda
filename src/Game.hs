@@ -68,7 +68,7 @@ import Lens.Micro (Lens', (^.))
 import Lens.Micro.Mtl (use, zoom, (%=), (+=), (-=), (.=), (<%=))
 import Music (bpm)
 import qualified Music
-import Raylib.Core (clearBackground, closeWindow, getFrameTime, getScreenHeight, getScreenWidth, initWindow, isKeyDown, isKeyPressed, setTargetFPS, setTraceLogLevel, toggleBorderlessWindowed)
+import Raylib.Core (clearBackground, closeWindow, getFrameTime, initWindow, isKeyDown, isKeyPressed, setTargetFPS, setTraceLogLevel)
 import Raylib.Core.Audio (initAudioDevice, playSound, unloadSound)
 import Raylib.Types (BlendMode (BlendAdditive), KeyboardKey (KeyDown, KeyEnter, KeyEscape, KeyG, KeyLeft, KeyLeftShift, KeyRight, KeyUp), TraceLogLevel (LogNone))
 import Raylib.Util (blendMode, drawing)
@@ -89,16 +89,13 @@ init = do
   cfg <- Config.read
   s <- Scores.read
   w <- initWindow cfg.width cfg.height "taterenda"
-  when cfg.fullScreen toggleBorderlessWindowed
   ts <-
     Textures
       <$> Resource.loadTexture "font.bmp"
       <*> Resource.loadTexture "select.bmp"
       <*> Resource.loadTexture "skin.bmp"
       <*> Resource.loadTexture "title.bmp"
-  aw <- getScreenWidth
-  ah <- getScreenHeight
-  let config' = cfg{actualWidth = int2Float aw, actualHeight = int2Float ah}
+  config' <- Config.setWindow cfg
   initAudioDevice
   setTargetFPS 60
   setTraceLogLevel LogNone
@@ -265,7 +262,7 @@ update = do
       appState .= ConfigState editMode'
       whenM
         (lift $ isKeyPressed KeyEscape)
-        (appState .= initSelect)
+        (zoom config Config.apply >> appState .= initSelect)
 
 initTitle :: AppState
 initTitle = TitleState (Title Start (Transition.init (Draw.vec (-40) 40)))
