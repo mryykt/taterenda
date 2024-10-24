@@ -262,7 +262,13 @@ update = do
       appState .= ConfigState editMode'
       whenM
         (lift $ isKeyPressed KeyEscape)
-        (zoom config Config.apply >> appState .= initSelect)
+        $ do
+          zoom config Config.apply
+          cfg <- use config
+          t <- use textures
+          let dtexture = Draw.texture cfg
+          drawer .= (dtexture, Draw.text dtexture t.font)
+          appState .= initSelect
 
 initTitle :: AppState
 initTitle = TitleState (Title Start (Transition.init (Draw.vec (-40) 40)))
