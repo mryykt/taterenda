@@ -20,7 +20,7 @@ import qualified Data.ByteString as BS
 import Data.IORef (newIORef, readIORef, writeIORef)
 import Data.Maybe (fromMaybe)
 import qualified Data.Text as Text
-import Raylib.Core (clearBackground, fileExists)
+import Raylib.Core (clearBackground, fileExists, getKeyPressed)
 import Raylib.Types (KeyboardKey (..), Rectangle (Rectangle))
 import Raylib.Util (drawing)
 import qualified Raylib.Util.Colors as Colors
@@ -65,7 +65,7 @@ instance ToJSON Config where
       , "key2" .= Text.pack (show config.key2)
       ]
 
-data EditMode = Width | Height | Fullscreen | ScKey | Key1 | Key2 deriving (Eq)
+data EditMode = Width | Height | ScKey | Key1 | Key2 | NoFocus deriving (Eq)
 
 initEditMode :: EditMode
 initEditMode = Width
@@ -93,18 +93,44 @@ update editMode = do
             guiGroupBox (Rectangle 10 10 500 200) (Just "window")
             (wem, width') <- guiValueBox (Rectangle 100 20 400 20) (Just "width") cfg.width 0 10000 (editMode == Width)
             (hem, height') <- guiValueBox (Rectangle 100 45 400 20) (Just "height") cfg.height 0 10000 (editMode == Height)
-            writeIORef cfg' cfg{width = width', height = height'}
+            fullScreen' <- guiCheckBox (Rectangle 100 70 20 20) (Just "fullscreen") cfg.fullScreen
+
+            guiGroupBox (Rectangle 10 220 500 200) (Just "key config")
+            (scem, scratchKey') <- keyConfig (Rectangle 100 230 400 20) cfg.scratchKey (editMode == ScKey)
+            (k1em, key1') <- keyConfig (Rectangle 100 255 400 20) cfg.key1 (editMode == Key1)
+            (k2em, key2') <- keyConfig (Rectangle 100 280 400 20) cfg.key2 (editMode == Key2)
+
+            writeIORef cfg' cfg{width = width', height = height', fullScreen = fullScreen', scratchKey = scratchKey', key1 = key1', key2 = key2'}
             writeIORef
               editMode'
               $ if
                 | wem && editMode /= Width -> Width
                 | hem && editMode /= Height -> Height
+                | cfg.fullScreen /= fullScreen' -> NoFocus
+                | scem && editMode /= ScKey -> ScKey
+                | scem -> NoFocus
+                | k1em && editMode /= Key1 -> Key1
+                | k1em -> NoFocus
+                | k2em && editMode /= Key2 -> Key2
+                | k2em -> NoFocus
                 | otherwise -> editMode
             return ()
           (,) <$> readIORef cfg' <*> readIORef editMode'
       )
   put cfg'
   return editMode'
+
+keyConfig :: Rectangle -> KeyboardKey -> Bool -> IO (Bool, KeyboardKey)
+keyConfig rect value editMode = do
+  (toggled, _) <- guiTextBox rect (show value) Nothing editMode
+  if editMode
+    then do
+      k <- getKeyPressed
+      if k /= KeyNull
+        then return (True, k)
+        else return (False, value)
+    else
+      return (toggled, value)
 
 def :: Config
 def =
