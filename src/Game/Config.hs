@@ -98,17 +98,29 @@ update editMode = do
       ( do
           cfg' <- newIORef cfg
           editMode' <- newIORef editMode
+          let
+            fontSize = min 30 $ max 15 $ min (cfg.actualWidth / 100.0) (cfg.actualHeight / 50.0)
+            elementHeight = fontSize + 5
+            labelWidth = 10 + 10 * (fontSize + 1)
+            formWidth = min (fontSize * 20) $ cfg.actualWidth - labelWidth - 20
+          guiSetStyleTextSize (round fontSize)
           drawing $ do
             clearBackground Colors.black
-            guiGroupBox (Rectangle 10 10 500 200) (Just "window")
-            (wem, width') <- guiValueBox (Rectangle 100 20 400 20) (Just "width") cfg.width 0 10000 (editMode == Width)
-            (hem, height') <- guiValueBox (Rectangle 100 45 400 20) (Just "height") cfg.height 0 10000 (editMode == Height)
-            fullScreen' <- guiCheckBox (Rectangle 100 70 20 20) (Just "fullscreen") cfg.fullScreen
+            guiGroupBox (Rectangle 10 10 (cfg.actualWidth - 20) (5.5 * elementHeight)) (Just "window")
+            guiLabel (Rectangle 20 (10 + elementHeight) labelWidth elementHeight) "width"
+            (wem, width') <- guiValueBox (Rectangle labelWidth (10 + elementHeight) formWidth elementHeight) Nothing cfg.width 0 10000 (editMode == Width)
+            guiLabel (Rectangle 20 (10 + 2.5 * elementHeight) labelWidth elementHeight) "height"
+            (hem, height') <- guiValueBox (Rectangle labelWidth (10 + 2.5 * elementHeight) formWidth elementHeight) Nothing cfg.height 0 10000 (editMode == Height)
+            guiLabel (Rectangle 20 (10 + 4.0 * elementHeight) labelWidth elementHeight) "fullscreen"
+            fullScreen' <- guiCheckBox (Rectangle labelWidth (10 + 4.0 * elementHeight) 20 elementHeight) Nothing cfg.fullScreen
 
-            guiGroupBox (Rectangle 10 220 500 200) (Just "key config")
-            (scem, scratchKey') <- keyConfig (Rectangle 100 230 400 20) cfg.scratchKey (editMode == ScKey)
-            (k1em, key1') <- keyConfig (Rectangle 100 255 400 20) cfg.key1 (editMode == Key1)
-            (k2em, key2') <- keyConfig (Rectangle 100 280 400 20) cfg.key2 (editMode == Key2)
+            guiGroupBox (Rectangle 10 (10 + 6 * elementHeight) (cfg.actualWidth - 20) (5.5 * elementHeight)) (Just "key config")
+            guiLabel (Rectangle 20 (10 + 6.5 * elementHeight) labelWidth elementHeight) "scratch key"
+            (scem, scratchKey') <- keyConfig (Rectangle labelWidth (10 + 6.5 * elementHeight) formWidth elementHeight) cfg.scratchKey (editMode == ScKey)
+            guiLabel (Rectangle 20 (10 + 8 * elementHeight) labelWidth elementHeight) "1-key"
+            (k1em, key1') <- keyConfig (Rectangle labelWidth (10 + 8 * elementHeight) formWidth elementHeight) cfg.key1 (editMode == Key1)
+            guiLabel (Rectangle 20 (10 + 9.5 * elementHeight) labelWidth elementHeight) "2-key"
+            (k2em, key2') <- keyConfig (Rectangle labelWidth (10 + 9.5 * elementHeight) formWidth elementHeight) cfg.key2 (editMode == Key2)
 
             writeIORef cfg' cfg{width = width', height = height', fullScreen = fullScreen', scratchKey = scratchKey', key1 = key1', key2 = key2'}
             writeIORef
