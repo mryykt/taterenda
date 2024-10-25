@@ -11,7 +11,7 @@ import Control.Monad.State.Strict
 import Data.IntMap ((!?))
 import Data.List.Extra (firstJust, foldl')
 import qualified Data.Map.Strict as Map
-import Data.Maybe (listToMaybe, mapMaybe)
+import Data.Maybe (isNothing, listToMaybe, mapMaybe)
 import qualified Data.Set as Set
 import GHC.Float (int2Float)
 import qualified Game.Animation as Animation
@@ -240,7 +240,7 @@ update = do
         poors <- playNotes >%= (unzip . fmap (Time.get (t - Time.fromSeconds (pl ^. currentBpm) (23 / 60))))
         unless (all null poors) (gauge -= 6 >> judgementCount . poor += 1 >> judgement .= Just Animation.poor)
         playSounds %= (mapMaybe (((pl ^. sounds) !?) . (^. value)) sounds1 ++)
-      when (all null (pl ^. playNotes) && null (pl ^. tateren . notes) && null (pl ^. tateren . bgms)) $ do
+      when (all null (pl ^. playNotes) && null (pl ^. tateren . notes) && null (pl ^. tateren . bgms) && isNothing (pl ^. judgement)) $ do
         cm <- Music.current <$> use musicList
         unless (pl ^. auto) $ do
           let isFullCombo = Scores.isFullCombo (pl ^. totalNotesCount) (pl ^. judgementCount)
