@@ -70,7 +70,7 @@ import Music (bpm)
 import qualified Music
 import Raylib.Core (clearBackground, closeWindow, getFrameTime, initWindow, isKeyDown, isKeyPressed, setTargetFPS, setTraceLogLevel)
 import Raylib.Core.Audio (initAudioDevice, playSound, unloadSound)
-import Raylib.Types (BlendMode (BlendAdditive), KeyboardKey (KeyDown, KeyEnter, KeyEscape, KeyG, KeyLeft, KeyLeftShift, KeyRight, KeyUp), TraceLogLevel (LogNone))
+import Raylib.Types (BlendMode (BlendAdditive), KeyboardKey (KeyDown, KeyEnter, KeyEscape, KeyG, KeyLeft, KeyLeftShift, KeyM, KeyRight, KeyUp), TraceLogLevel (LogNone))
 import Raylib.Util (blendMode, drawing)
 import Raylib.Util.Colors (black)
 import System.FilePath ((</>))
@@ -139,7 +139,8 @@ update = do
         $ do
           (_, curr) <- Music.current <$> use musicList
           let dir = "sound" </> curr.directory
-          whenJustM (lift $ Tateren.load $ dir </> curr.chart) $ \tate -> do
+          mirror <- lift $ isKeyDown KeyM
+          whenJustM (lift $ Tateren.load mirror $ dir </> curr.chart) $ \tate -> do
             loader <- lift $ Resource.soundLoader $ (dir </>) <$> curr.sounds
             appState .= LoadState (Load tate loader)
       whenM

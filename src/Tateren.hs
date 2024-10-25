@@ -22,8 +22,8 @@ import Tateren.Types
   )
 import qualified Time
 
-fromRawData :: RawChart -> Tateren
-fromRawData (RawChart cs mss _) = def & measures .~ ms & flip (foldr convertCommands) filtered
+fromRawData :: Bool -> RawChart -> Tateren
+fromRawData mirror (RawChart cs mss _) = def & measures .~ ms & flip (foldr convertCommands) filtered
   where
     filtered = filter (\(Command _ _ v _ _) -> v /= 0) cs
     ms = (\(MeasureStart l s) -> Measure (int2Float l) (Time.fromInt s)) <$> mss
@@ -31,10 +31,10 @@ fromRawData (RawChart cs mss _) = def & measures .~ ms & flip (foldr convertComm
       0 -> bgms %~ (Object (Time.fromInt t) v () :)
       1 -> bpmChanges %~ (Object (Time.fromInt t) v () :)
       2 -> stops %~ (Object (Time.fromInt t) v () :)
-      0xb -> notes %~ (Object (Time.fromInt t) v K1 :)
-      0xc -> notes %~ (Object (Time.fromInt t) v K2 :)
+      0xb -> notes %~ (Object (Time.fromInt t) v (if mirror then K2 else K1) :)
+      0xc -> notes %~ (Object (Time.fromInt t) v (if mirror then K1 else K2) :)
       0xd -> notes %~ (Object (Time.fromInt t) v Sc :)
       _ -> error ("ここに来たとしたら実装漏れ:" ++ show typ)
 
-load :: FilePath -> IO (Maybe Tateren)
-load = fmap (fmap fromRawData) . D.load
+load :: Bool -> FilePath -> IO (Maybe Tateren)
+load mirror = fmap (fmap (fromRawData mirror)) . D.load
