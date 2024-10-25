@@ -5,7 +5,7 @@ import qualified Codec.Picture as Juicy
 import Control.Concurrent.Async (Async, async, mapConcurrently, poll)
 import Control.Monad.Extra ((<=<))
 import qualified Data.Vector.Storable as Vector
-import Raylib.Core.Audio (loadSound)
+import Raylib.Core.Audio (loadSound, setSoundPitch)
 import qualified Raylib.Core.Textures as Textures
 import Raylib.Types (Image (..), PixelFormat (PixelFormatUncompressedR8G8B8), Sound, Texture)
 import qualified Raylib.Types as Raylib
@@ -25,10 +25,13 @@ get (Loader l) = do
     Just (Right x) -> return $ Just x
     _ -> return Nothing
 
-soundLoader :: (Traversable t) => t String -> IO (Loader t Sound)
-soundLoader = loader f
+soundLoader :: (Traversable t) => Float -> t String -> IO (Loader t Sound)
+soundLoader speed = loader f
   where
-    f = loadSound
+    f path = do
+      s <- loadSound path
+      setSoundPitch s speed
+      return s
 
 convert :: DynamicImage -> Raylib.Image
 convert src =
