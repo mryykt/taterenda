@@ -27,7 +27,6 @@ import Game.Types
   ( AppState (..)
   , Game (Game)
   , HasGauge (gauge)
-  , HasSpeed (speed)
   , Load (..)
   , Play (Play)
   , Select (Select)
@@ -143,9 +142,9 @@ update = do
           let dir = "sound" </> curr.directory
           mirror <- lift $ isKeyDown KeyM
           whenJustM (lift $ Tateren.load mirror $ dir </> curr.chart) $ \tate -> do
-            loader <- lift $ Resource.soundLoader 1.25 $ (dir </>) <$> curr.sounds
+            loader <- lift $ Resource.soundLoader $ (dir </>) <$> curr.sounds
             isAuto <- lift $ isKeyDown KeyA
-            appState .= LoadState (Load tate isAuto 1.25 loader)
+            appState .= LoadState (Load tate isAuto loader)
       whenM
         (lift $ isKeyPressed KeyEscape)
         (appState .= initTitle)
@@ -174,7 +173,6 @@ update = do
                     Scores.initJudge
                     (length $ ld ^. tateren . notes)
                     (ld ^. auto)
-                    (ld ^. speed)
                     s
                 )
         )
@@ -224,8 +222,8 @@ update = do
           )
         --  update
         sounds1 <- (tateren . bgms) >%= Time.get t
-        notes1 <- (tateren . notes) >%= Time.get (t + lengthInDisplay (pl ^. speed))
-        measures1 <- (tateren . measures) >%= Time.get (t + lengthInDisplay (pl ^. speed))
+        notes1 <- (tateren . notes) >%= Time.get (t + lengthInDisplay)
+        measures1 <- (tateren . measures) >%= Time.get (t + lengthInDisplay)
         bpmChanges1 <- (tateren . bpmChanges) >%= Time.get t
         stops1 <- (tateren . stops) >%= Time.get t
         let insertNote ns n = Map.update (Just . (++ [n])) (n ^. ext) ns
@@ -233,10 +231,10 @@ update = do
         playMeasures %= ((++ measures1) . dropWhile ((t >) . (^. time)))
         currentBpm %= (\b -> maybe b (int2Float . (^. value)) $ listToMaybe bpmChanges1)
         case pl ^. stop of
-          Just st | st > 0 -> stop .= Just (Time.update (-(pl ^. speed * dt)) (pl ^. currentBpm) st)
+          Just st | st > 0 -> stop .= Just (Time.update (-dt) (pl ^. currentBpm) st)
           _ -> do
             stop .= listToMaybe (Time.fromInt . (^. value) <$> stops1)
-            time %= Time.update (pl ^. speed * dt) (pl ^. currentBpm)
+            time %= Time.update dt (pl ^. currentBpm)
         judgement %= (Animation.update dt =<<)
         bombs %= (\b -> foldl' (flip (Map.update (Animation.update dt))) b [Sc, K1, K2])
         poors <- playNotes >%= (unzip . fmap (Time.get (t - Time.fromSeconds (pl ^. currentBpm) (23 / 60))))
@@ -244,7 +242,7 @@ update = do
         playSounds %= (mapMaybe (((pl ^. sounds) !?) . (^. value)) sounds1 ++)
       when (all null (pl ^. playNotes) && null (pl ^. tateren . notes) && null (pl ^. tateren . bgms)) $ do
         cm <- Music.current <$> use musicList
-        unless (pl ^. auto || pl ^. speed == 1.0) $ do
+        unless (pl ^. auto) $ do
           let isFullCombo = Scores.isFullCombo (pl ^. totalNotesCount) (pl ^. judgementCount)
           scores' <- scores <%= Scores.update (snd cm) (pl ^. gauge > 80) False isFullCombo (pl ^. judgementCount)
           lift $ Scores.write scores'
@@ -342,7 +340,7 @@ draw = do
                 K1 -> (26 - 60, Draw.rect 139 1 9 139)
                 K2 -> (36 - 60, Draw.rect 139 1 9 139)
           dtexture t.skin (Draw.vec x (-80)) range
-        let y ot = (141 - (141 / lengthInDisplay (pl ^. speed) * Time.toFloat (ot - pl ^. time))) - 82
+        let y ot = (141 - (141 / lengthInDisplay * Time.toFloat (ot - pl ^. time))) - 82
         forM_ (pl ^. playMeasures) $ \m -> do
           dtexture t.skin (Draw.vec (8 - 60) (y (m ^. time) + 1)) (Draw.rect 9 162 38 1)
         forM_ (pl ^. playNotes) $
@@ -388,8 +386,8 @@ draw = do
           dtext (printf "POOR  :%d" $ score.judge ^. poor) (Draw.vec (-56) 70) False False
       _ -> return ()
 
-lengthInDisplay :: (Fractional t) => Float -> t
-lengthInDisplay s = (0xc0 * 1.5) * fromRational (realToFrac s)
+lengthInDisplay :: (Fractional t) => t
+lengthInDisplay = 0xc0 * 1.5
 
 shouldClose :: StateT Game IO Bool
 shouldClose = use close
