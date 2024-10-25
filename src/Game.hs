@@ -34,6 +34,7 @@ import Game.Types
   , Title (Title)
   , TitleCusor (..)
   , appState
+  , auto
   , bad
   , bar
   , bombs
@@ -70,7 +71,7 @@ import Music (bpm)
 import qualified Music
 import Raylib.Core (clearBackground, closeWindow, getFrameTime, initWindow, isKeyDown, isKeyPressed, setTargetFPS, setTraceLogLevel)
 import Raylib.Core.Audio (initAudioDevice, playSound, unloadSound)
-import Raylib.Types (BlendMode (BlendAdditive), KeyboardKey (KeyDown, KeyEnter, KeyEscape, KeyG, KeyLeft, KeyLeftShift, KeyM, KeyRight, KeyUp), TraceLogLevel (LogNone))
+import Raylib.Types (BlendMode (BlendAdditive), KeyboardKey (KeyA, KeyDown, KeyEnter, KeyEscape, KeyG, KeyLeft, KeyLeftShift, KeyM, KeyRight, KeyUp), TraceLogLevel (LogNone))
 import Raylib.Util (blendMode, drawing)
 import Raylib.Util.Colors (black)
 import System.FilePath ((</>))
@@ -142,7 +143,8 @@ update = do
           mirror <- lift $ isKeyDown KeyM
           whenJustM (lift $ Tateren.load mirror $ dir </> curr.chart) $ \tate -> do
             loader <- lift $ Resource.soundLoader $ (dir </>) <$> curr.sounds
-            appState .= LoadState (Load tate loader)
+            isAuto <- lift $ isKeyDown KeyA
+            appState .= LoadState (Load tate isAuto loader)
       whenM
         (lift $ isKeyPressed KeyEscape)
         (appState .= initTitle)
@@ -170,6 +172,7 @@ update = do
                     Map.empty
                     Scores.initJudge
                     (length $ ld ^. tateren . notes)
+                    (ld ^. auto)
                     s
                 )
         )
@@ -179,7 +182,6 @@ update = do
         keys .= Set.empty
         playSounds .= []
         t <- use time
-
         -- keyboard control
         let
           f k x = if x ^. ext == k then Just x else Nothing
@@ -210,9 +212,13 @@ update = do
             (_, Nothing) -> return ()
         forM_
           [(Sc, cfg.scratchKey), (K1, cfg.key1), (K2, cfg.key2)]
-          ( \(typ, k) -> do
-              whenM (lift $ isKeyPressed k) (keyHit typ)
-              whenM (lift $ isKeyDown k) (keys %= Set.insert typ)
+          ( \(typ, k) ->
+              if pl ^. auto
+                then
+                  whenJust (listToMaybe ((pl ^. playNotes) Map.! typ)) (\n -> when (n ^. time - t <= Time.fromSeconds (pl ^. currentBpm) (1 / 60)) (keyHit typ))
+                else do
+                  whenM (lift $ isKeyPressed k) (keyHit typ)
+                  whenM (lift $ isKeyDown k) (keys %= Set.insert typ)
           )
         --  update
         sounds1 <- (tateren . bgms) >%= Time.get t
@@ -236,15 +242,10 @@ update = do
         playSounds %= (mapMaybe (((pl ^. sounds) !?) . (^. value)) sounds1 ++)
       when (all null (pl ^. playNotes) && null (pl ^. tateren . notes) && null (pl ^. tateren . bgms)) $ do
         cm <- Music.current <$> use musicList
-        scores' <-
-          scores
-            <%= Scores.update
-              (snd cm)
-              (pl ^. gauge > 80)
-              False
-              (Scores.isFullCombo (pl ^. totalNotesCount) (pl ^. judgementCount))
-              (pl ^. judgementCount)
-        lift $ Scores.write scores'
+        unless (pl ^. auto) $ do
+          let isFullCombo = Scores.isFullCombo (pl ^. totalNotesCount) (pl ^. judgementCount)
+          scores' <- scores <%= Scores.update (snd cm) (pl ^. gauge > 80) False isFullCombo (pl ^. judgementCount)
+          lift $ Scores.write scores'
         appState .= initSelect
       whenM (lift $ isKeyPressed KeyEscape) (lift (mapM_ (`unloadSound` w) (pl ^. sounds)) >> appState .= initSelect)
     HiScoreState _ -> do

@@ -43,7 +43,7 @@ data TitleCusor = Start | HiScore | Quit deriving (Eq, Ord, Enum)
 
 data Select = Select {_left :: Transition, _right :: Transition}
 
-data Load = Load {_loadTateren :: Tateren, _loadSounds :: Loader IntMap Sound}
+data Load = Load {_loadTateren :: Tateren, _loadAuto :: Bool, _loadSounds :: Loader IntMap Sound}
 
 data Play = Play
   { _playTime :: Time
@@ -59,6 +59,7 @@ data Play = Play
   , _playBombs :: Map Key Animation
   , _playJudgementCount :: JudgementCount
   , _playTotalNotesCount :: Int
+  , _playAuto :: Bool
   , _playSounds :: IntMap Sound
   }
 
