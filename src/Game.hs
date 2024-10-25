@@ -319,7 +319,10 @@ draw = do
         when (index > 0) $ dtexture t.select (Draw.vec (-60) (-20)) (Draw.rect 649 162 13 11)
         when (index < 15) $ dtexture t.select (Draw.vec 47 (-20)) (Draw.rect 663 162 13 11)
         dtext (printf "%02d/16" (index + 1)) (Draw.vec 0 (-75)) True False
-        whenJust (Scores.get music s) $ \v -> dtext (printf "HiScore:%4d" (Scores.exScore v.judge)) (Draw.vec 0 (-60)) True False
+        whenJust (Scores.get music s) $ \v -> do
+          when v.clear $ dtext "*" (Draw.vec 15 (-8)) True False
+          when v.fullCombo $ dtext "*" (Draw.vec 30 (-8)) True False
+          dtext (printf "HiScore:%4d" (Scores.exScore v.judge)) (Draw.vec 0 (-60)) True False
         dtext (maybe "????" (`replicate` '*') music.difficulty) (Draw.vec 0 (-45)) True False
         dtext "-TITLE--------" (Draw.vec 0 5) True False
         dtext music.name (Draw.vec (-56) 15) False False
@@ -371,6 +374,8 @@ draw = do
         dtext (printf "%02d/16" (index + 1)) (Draw.vec 0 (-75)) True False
         dtext music.name (Draw.vec (-56) (-5)) False False
         whenJust (Scores.get (snd $ Music.current ml) s) $ \score -> do
+          when score.clear $ dtext "*" (Draw.vec 15 (-18)) True False
+          when score.fullCombo $ dtext "*" (Draw.vec 30 (-18)) True False
           dtext (printf "Score :%d" $ Scores.exScore score.judge) (Draw.vec (-56) 20) False False
           dtext (printf "PGREAT:%d" $ score.judge ^. pgreat) (Draw.vec (-56) 30) False False
           dtext (printf "GREAT :%d" $ score.judge ^. great) (Draw.vec (-56) 40) False False
